@@ -3,7 +3,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -79,4 +79,21 @@ def vendor_list(request: Request):
         ).fetchall()
     return templates.TemplateResponse(
         "vendors.html", {"request": request, "vendors": vendors}
+    )
+
+
+@app.get("/vendor/{vendor_uid}")
+def vendor_detail(request: Request, vendor_uid: str):
+    with get_connection() as conn:
+        vendor = conn.execute(
+            "SELECT * FROM vendors WHERE vendor_uid = ?",
+            (vendor_uid,),
+        ).fetchone()
+
+    if vendor is None:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    return templates.TemplateResponse(
+        "vendor_detail.html",
+        {"request": request, "vendor": vendor},
     )

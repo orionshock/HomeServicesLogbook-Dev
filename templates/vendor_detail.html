@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}{{ vendor.name }} — Home Services Logbook{% endblock %}
+
+{% block content %}
+<h1>{{ vendor.name }}</h1>
+
+<p><a href="/vendors">Back to Vendors</a></p>
+
+<section>
+    <h2>Vendor Details</h2>
+    <ul>
+        {% if vendor.category %}
+        <li><strong>Category:</strong> {{ vendor.category }}</li>
+        {% endif %}
+
+        {% if vendor.account_number %}
+        <li><strong>Account Number:</strong> {{ vendor.account_number }}</li>
+        {% endif %}
+
+        {% if vendor.name_on_account %}
+        <li><strong>Name on Account:</strong> {{ vendor.name_on_account }}</li>
+        {% endif %}
+
+        {% if vendor.portal_url %}
+        <li><strong>Portal URL:</strong> <a href="{{ vendor.portal_url }}" target="_blank" rel="noopener noreferrer">{{ vendor.portal_url }}</a></li>
+        {% endif %}
+
+        {% if vendor.portal_username %}
+        <li><strong>Portal Username:</strong> {{ vendor.portal_username }}</li>
+        {% endif %}
+
+        {% if vendor.phone_on_file %}
+        <li><strong>Phone on File:</strong> {{ vendor.phone_on_file }}</li>
+        {% endif %}
+
+        {% if vendor.security_pin %}
+        <li><strong>Security PIN:</strong> {{ vendor.security_pin }}</li>
+        {% endif %}
+
+        {% if vendor.service_location %}
+        <li><strong>Service Location:</strong> {{ vendor.service_location }}</li>
+        {% endif %}
+    </ul>
+</section>
+
+{% if vendor.vendor_notes %}
+<section>
+    <h2>Vendor Notes</h2>
+    <p>{{ vendor.vendor_notes }}</p>
+</section>
+{% endif %}
+{% endblock %}
