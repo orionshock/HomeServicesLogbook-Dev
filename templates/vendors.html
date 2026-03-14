@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Vendors — Home Services Logbook{% endblock %}
+
+{% block content %}
+<h1>Vendors</h1>
+
+{% if vendors %}
+<ul>
+    {% for vendor in vendors %}
+    <li><a href="/vendor/{{ vendor.vendor_uid }}">{{ vendor.name }}</a>{% if vendor.category %} — {{ vendor.category }}{% endif %}</li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No vendors yet. Add your first vendor to get started.</p>
+{% endif %}
+{% endblock %}

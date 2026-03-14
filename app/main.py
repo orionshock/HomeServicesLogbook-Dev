@@ -20,3 +20,15 @@ templates = Jinja2Templates(directory="templates")
 @app.get("/")
 def read_root(request: Request):
     return templates.TemplateResponse("home.html", {"request": request})
+
+
+@app.get("/vendors")
+def vendor_list(request: Request):
+    from app.db import get_connection
+    with get_connection() as conn:
+        vendors = conn.execute(
+            "SELECT * FROM vendors WHERE archived_at IS NULL ORDER BY name"
+        ).fetchall()
+    return templates.TemplateResponse(
+        "vendors.html", {"request": request, "vendors": vendors}
+    )
