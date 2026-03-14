@@ -96,12 +96,23 @@ def vendor_detail(request: Request, vendor_uid: str):
             (vendor_uid,),
         ).fetchone()
 
+        entries = conn.execute(
+            """
+            SELECT *
+            FROM entries
+            WHERE vendor_id = ?
+              AND archived_at IS NULL
+            ORDER BY created_at DESC, id DESC
+            """,
+            (vendor["id"],),
+        ).fetchall() if vendor else []
+
     if vendor is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
 
     return templates.TemplateResponse(
         "vendor_detail.html",
-        {"request": request, "vendor": vendor},
+        {"request": request, "vendor": vendor, "entries": entries},
     )
 
 

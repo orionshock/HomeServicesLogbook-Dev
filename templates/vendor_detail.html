@@ -71,4 +71,34 @@
         </div>
     </form>
 </section>
+
+<section>
+    <h2>Entry Timeline</h2>
+
+    {% if entries %}
+    {% for entry in entries %}
+    <article>
+        <p><strong>Created:</strong> {{ entry.created_at }}</p>
+
+        {% if entry.body_text %}
+        <p>{{ entry.body_text }}</p>
+        {% endif %}
+
+        {% if entry.vendor_reference %}
+        <p><strong>Vendor Reference:</strong> {{ entry.vendor_reference }}</p>
+        {% endif %}
+
+        {% if entry.rep_name %}
+        <p><strong>Rep Name:</strong> {{ entry.rep_name }}</p>
+        {% endif %}
+    </article>
+
+    {% if not loop.last %}
+    <hr>
+    {% endif %}
+    {% endfor %}
+    {% else %}
+    <p>No entries yet. Add your first logbook entry above.</p>
+    {% endif %}
+</section>
 {% endblock %}
