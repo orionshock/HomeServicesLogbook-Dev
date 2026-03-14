@@ -319,7 +319,7 @@ Save uploaded files to disk.
 Insert attachment metadata into the `attachments` table.
 
 ### Step 78
-Keep original filename as metadata only.
+Keep an original, but sanitized, filename as metadata only.
 
 ### Step 79
 Verify an uploaded file is saved to disk.

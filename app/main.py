@@ -2,8 +2,9 @@ import re
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from pathlib import Path
 
-from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -24,6 +25,21 @@ def _make_entry_uid() -> str:
 
 def _now_utc() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _make_stored_filename(original_name: str) -> str:
+    ext = Path(original_name or "").suffix.lower()
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    short = uuid.uuid4().hex[:6]
+    return f"{stamp}-{short}{ext}"
+
+def _sanitize_original_filename(filename: str) -> str:
+    basename = Path(filename or "").name
+    sanitized = re.sub(r"\s+", "_", basename)
+    sanitized = re.sub(r"[^A-Za-z0-9._-]", "_", sanitized)
+    sanitized = re.sub(r"_+", "_", sanitized)
+    sanitized = sanitized.strip("._")
+    return (sanitized or "uploaded-file")[:255]
 
 
 @asynccontextmanager
@@ -122,6 +138,7 @@ def create_vendor_entry(
     body_text: str = Form(""),
     vendor_reference: str = Form(""),
     rep_name: str = Form(""),
+    attachment: UploadFile | None = File(None),
 ):
     with get_connection() as conn:
         vendor = conn.execute(
@@ -132,7 +149,7 @@ def create_vendor_entry(
         if vendor is None:
             raise HTTPException(status_code=404, detail="Vendor not found")
 
-        conn.execute(
+        cursor = conn.execute(
             """
             INSERT INTO entries (
                 entry_uid,
@@ -153,5 +170,57 @@ def create_vendor_entry(
                 _now_utc(),
             ),
         )
+
+        entry_id = cursor.lastrowid
+
+        if attachment and attachment.filename:
+            raw_name = Path(attachment.filename).name
+            if not Path(raw_name).suffix:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Attachment filename must include an extension",
+                )
+
+            now = datetime.now(timezone.utc)
+            subdir = Path("uploads") / now.strftime("%Y") / now.strftime("%m")
+            subdir.mkdir(parents=True, exist_ok=True)
+
+            original_filename = _sanitize_original_filename(attachment.filename)
+            if not Path(original_filename).suffix:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Attachment filename must include an extension",
+                )
+
+            stored_filename = _make_stored_filename(original_filename)
+            disk_path = subdir / stored_filename
+            file_bytes = attachment.file.read()
+
+            with disk_path.open("wb") as out:
+                out.write(file_bytes)
+
+            conn.execute(
+                """
+                INSERT INTO attachments (
+                    entry_id,
+                    original_filename,
+                    stored_filename,
+                    relative_path,
+                    mime_type,
+                    file_size,
+                    created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    entry_id,
+                    original_filename,
+                    stored_filename,
+                    str(disk_path).replace("\\", "/"),
+                    attachment.content_type,
+                    len(file_bytes),
+                    _now_utc(),
+                ),
+            )
 
     return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
