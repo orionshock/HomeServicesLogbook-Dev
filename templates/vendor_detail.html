@@ -95,6 +95,18 @@
         {% if entry.rep_name %}
         <p><strong>Rep Name:</strong> {{ entry.rep_name }}</p>
         {% endif %}
+
+        {% set entry_attachments = attachments_by_entry.get(entry.id, []) %}
+        {% if entry_attachments %}
+        <p><strong>Attachments:</strong></p>
+        <ul>
+            {% for attachment in entry_attachments %}
+            <li>
+                <a href="/attachments/{{ attachment.attachment_uid }}">{{ attachment.original_filename }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
     </article>
 
     {% if not loop.last %}

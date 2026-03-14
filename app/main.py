@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -22,6 +23,10 @@ def _make_entry_uid() -> str:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     short = uuid.uuid4().hex[:6]
     return f"{stamp}-{short}"
+
+
+def _make_attachment_uid() -> str:
+    return uuid.uuid4().hex
 
 
 def _now_utc() -> str:
@@ -51,6 +56,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 templates = Jinja2Templates(directory="templates")
 
@@ -125,12 +131,62 @@ def vendor_detail(request: Request, vendor_uid: str):
             (vendor["id"],),
         ).fetchall() if vendor else []
 
+        attachments_by_entry: dict[int, list] = {}
+        if entries:
+            entry_ids = [entry["id"] for entry in entries]
+            placeholders = ",".join("?" for _ in entry_ids)
+            attachments = conn.execute(
+                f"""
+                SELECT attachment_uid, entry_id, original_filename
+                FROM attachments
+                WHERE entry_id IN ({placeholders})
+                ORDER BY id ASC
+                """,
+                tuple(entry_ids),
+            ).fetchall()
+            for item in attachments:
+                attachments_by_entry.setdefault(item["entry_id"], []).append(item)
+
     if vendor is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
 
     return templates.TemplateResponse(
         "vendor_detail.html",
-        {"request": request, "vendor": vendor, "entries": entries},
+        {
+            "request": request,
+            "vendor": vendor,
+            "entries": entries,
+            "attachments_by_entry": attachments_by_entry,
+        },
+    )
+
+
+@app.get("/attachments/{attachment_uid}")
+def attachment_download(attachment_uid: str):
+    with get_connection() as conn:
+        attachment = conn.execute(
+            """
+            SELECT attachment_uid, original_filename, relative_path, mime_type
+            FROM attachments
+            WHERE attachment_uid = ?
+            """,
+            (attachment_uid,),
+        ).fetchone()
+
+    if attachment is None:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+
+    rel_path = Path(attachment["relative_path"])
+    abs_path = (BASE_DIR / rel_path).resolve()
+    uploads_root = (BASE_DIR / "uploads").resolve()
+
+    if uploads_root not in abs_path.parents or not abs_path.is_file():
+        raise HTTPException(status_code=404, detail="Attachment file not found")
+
+    return FileResponse(
+        path=abs_path,
+        media_type=attachment["mime_type"] or "application/octet-stream",
+        filename=attachment["original_filename"],
     )
 
 
@@ -204,6 +260,7 @@ def create_vendor_entry(
             conn.execute(
                 """
                 INSERT INTO attachments (
+                    attachment_uid,
                     entry_id,
                     original_filename,
                     stored_filename,
@@ -212,9 +269,10 @@ def create_vendor_entry(
                     file_size,
                     created_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
+                    _make_attachment_uid(),
                     entry_id,
                     original_filename,
                     stored_filename,

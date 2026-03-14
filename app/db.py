@@ -51,6 +51,7 @@ def init_db() -> None:
 
             CREATE TABLE IF NOT EXISTS attachments (
                 id                INTEGER PRIMARY KEY,
+                attachment_uid    TEXT NOT NULL UNIQUE,
                 entry_id          INTEGER NOT NULL,
                 original_filename TEXT NOT NULL,
                 stored_filename   TEXT NOT NULL,
@@ -73,4 +74,7 @@ def init_db() -> None:
 
             CREATE INDEX IF NOT EXISTS idx_attachments_entry_id
                 ON attachments (entry_id);
+
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_attachments_attachment_uid
+                ON attachments (attachment_uid);
         """)
