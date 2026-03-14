@@ -50,4 +50,25 @@
     <p>{{ vendor.vendor_notes }}</p>
 </section>
 {% endif %}
+
+<section>
+    <h2>New Entry</h2>
+    <form method="post" action="/vendor/{{ vendor.vendor_uid }}/entries">
+        <div>
+            <label for="body_text">Entry</label><br>
+            <textarea id="body_text" name="body_text" rows="6" cols="70"></textarea>
+        </div>
+        <div>
+            <label for="vendor_reference">Vendor Reference (optional)</label><br>
+            <input type="text" id="vendor_reference" name="vendor_reference">
+        </div>
+        <div>
+            <label for="rep_name">Rep Name (optional)</label><br>
+            <input type="text" id="rep_name" name="rep_name">
+        </div>
+        <div>
+            <button type="submit">Save Entry</button>
+        </div>
+    </form>
+</section>
 {% endblock %}

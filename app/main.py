@@ -16,6 +16,12 @@ def _make_vendor_uid(name: str) -> str:
     return f"{slug}-{short}"
 
 
+def _make_entry_uid() -> str:
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    short = uuid.uuid4().hex[:6]
+    return f"{stamp}-{short}"
+
+
 def _now_utc() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -97,3 +103,44 @@ def vendor_detail(request: Request, vendor_uid: str):
         "vendor_detail.html",
         {"request": request, "vendor": vendor},
     )
+
+
+@app.post("/vendor/{vendor_uid}/entries")
+def create_vendor_entry(
+    vendor_uid: str,
+    body_text: str = Form(""),
+    vendor_reference: str = Form(""),
+    rep_name: str = Form(""),
+):
+    with get_connection() as conn:
+        vendor = conn.execute(
+            "SELECT id FROM vendors WHERE vendor_uid = ?",
+            (vendor_uid,),
+        ).fetchone()
+
+        if vendor is None:
+            raise HTTPException(status_code=404, detail="Vendor not found")
+
+        conn.execute(
+            """
+            INSERT INTO entries (
+                entry_uid,
+                vendor_id,
+                body_text,
+                vendor_reference,
+                rep_name,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                _make_entry_uid(),
+                vendor["id"],
+                body_text or None,
+                vendor_reference or None,
+                rep_name or None,
+                _now_utc(),
+            ),
+        )
+
+    return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
