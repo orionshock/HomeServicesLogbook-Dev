@@ -1,9 +1,23 @@
+import re
+import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Form, Request
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from app.db import init_db
+from app.db import get_connection, init_db
+
+
+def _make_vendor_uid(name: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:30]
+    short = uuid.uuid4().hex[:4]
+    return f"{slug}-{short}"
+
+
+def _now_utc() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 @asynccontextmanager
@@ -22,9 +36,43 @@ def read_root(request: Request):
     return templates.TemplateResponse("home.html", {"request": request})
 
 
+@app.get("/vendors/new")
+def vendor_new_form(request: Request):
+    return templates.TemplateResponse("vendor_new.html", {"request": request})
+
+
+@app.post("/vendors/new")
+def vendor_new_submit(
+    request: Request,
+    name: str = Form(...),
+    category: str = Form(""),
+    account_number: str = Form(""),
+    portal_url: str = Form(""),
+    vendor_notes: str = Form(""),
+):
+    vendor_uid = _make_vendor_uid(name)
+    now = _now_utc()
+    with get_connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO vendors (vendor_uid, name, category, account_number, portal_url, vendor_notes, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                vendor_uid,
+                name,
+                category or None,
+                account_number or None,
+                portal_url or None,
+                vendor_notes or None,
+                now,
+            ),
+        )
+    return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
+
+
 @app.get("/vendors")
 def vendor_list(request: Request):
-    from app.db import get_connection
     with get_connection() as conn:
         vendors = conn.execute(
             "SELECT * FROM vendors WHERE archived_at IS NULL ORDER BY name"

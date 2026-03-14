@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Add Vendor — Home Services Logbook{% endblock %}
+
+{% block content %}
+<h1>Add Vendor</h1>
+
+<form method="post" action="/vendors/new">
+    <div>
+        <label for="name">Vendor Name *</label><br>
+        <input type="text" id="name" name="name" required>
+    </div>
+    <div>
+        <label for="category">Category</label><br>
+        <input type="text" id="category" name="category" placeholder="e.g. ISP, HVAC, Plumber">
+    </div>
+    <div>
+        <label for="account_number">Account Number</label><br>
+        <input type="text" id="account_number" name="account_number">
+    </div>
+    <div>
+        <label for="portal_url">Portal URL</label><br>
+        <input type="url" id="portal_url" name="portal_url" placeholder="https://">
+    </div>
+    <div>
+        <label for="vendor_notes">Notes</label><br>
+        <textarea id="vendor_notes" name="vendor_notes" rows="4" cols="50"></textarea>
+    </div>
+    <div>
+        <button type="submit">Save Vendor</button>
+        <a href="/vendors">Cancel</a>
+    </div>
+</form>
+{% endblock %}
