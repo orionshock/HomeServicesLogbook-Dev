@@ -22,43 +22,43 @@
     <form method="post" action="{{ form_action }}">
         <div class="form-field">
             <label for="name">Vendor Name *</label>
-            <input type="text" id="name" name="name" required value="{{ vendor.name if vendor else '' }}">
+            <input type="text" id="name" name="name" required value="{% if vendor %}{{ vendor.name or '' }}{% endif %}">
         </div>
         <div class="form-field">
             <label for="category">Category</label>
-            <input type="text" id="category" name="category" placeholder="e.g. ISP, HVAC, Plumber" value="{{ vendor.category if vendor else '' }}">
+            <input type="text" id="category" name="category" placeholder="e.g. ISP, HVAC, Plumber" value="{% if vendor %}{{ vendor.category or '' }}{% endif %}">
         </div>
         <div class="form-field">
             <label for="account_number">Account Number</label>
-            <input type="text" id="account_number" name="account_number" value="{{ vendor.account_number if vendor else '' }}">
+            <input type="text" id="account_number" name="account_number" value="{% if vendor %}{{ vendor.account_number or '' }}{% endif %}">
         </div>
         <div class="form-field">
             <label for="name_on_account">Name on Account</label>
-            <input type="text" id="name_on_account" name="name_on_account" value="{{ vendor.name_on_account if vendor else '' }}">
+            <input type="text" id="name_on_account" name="name_on_account" value="{% if vendor %}{{ vendor.name_on_account or '' }}{% endif %}">
         </div>
         <div class="form-field">
             <label for="portal_url">Portal URL</label>
-            <input type="text" id="portal_url" name="portal_url" value="{{ vendor.portal_url if vendor else '' }}" placeholder="example.com or https://example.com" autocomplete="url" inputmode="url" title="Optional: enter example.com or a full http/https URL">
+            <input type="text" id="portal_url" name="portal_url" value="{% if vendor %}{{ vendor.portal_url or '' }}{% endif %}" placeholder="example.com or https://example.com" autocomplete="url" inputmode="url" title="Optional: enter example.com or a full http/https URL">
         </div>
         <div class="form-field">
             <label for="portal_username">Portal Username</label>
-            <input type="text" id="portal_username" name="portal_username" value="{{ vendor.portal_username if vendor else '' }}">
+            <input type="text" id="portal_username" name="portal_username" value="{% if vendor %}{{ vendor.portal_username or '' }}{% endif %}">
         </div>
         <div class="form-field">
             <label for="phone_on_file">Phone on File</label>
-            <input type="text" id="phone_on_file" name="phone_on_file" value="{{ vendor.phone_on_file if vendor else '' }}">
+            <input type="text" id="phone_on_file" name="phone_on_file" value="{% if vendor %}{{ vendor.phone_on_file or '' }}{% endif %}">
         </div>
         <div class="form-field">
             <label for="security_pin">Security PIN</label>
-            <input type="text" id="security_pin" name="security_pin" value="{{ vendor.security_pin if vendor else '' }}">
+            <input type="text" id="security_pin" name="security_pin" value="{% if vendor %}{{ vendor.security_pin or '' }}{% endif %}">
         </div>
         <div class="form-field">
             <label for="service_location">Service Location</label>
-            <input type="text" id="service_location" name="service_location" value="{{ vendor.service_location if vendor else '' }}">
+            <input type="text" id="service_location" name="service_location" value="{% if vendor %}{{ vendor.service_location or '' }}{% endif %}">
         </div>
         <div class="form-field">
             <label for="vendor_notes">Vendor Notes</label>
-            <textarea id="vendor_notes" name="vendor_notes" rows="6">{{ vendor.vendor_notes if vendor else '' }}</textarea>
+            <textarea id="vendor_notes" name="vendor_notes" rows="6">{% if vendor %}{{ vendor.vendor_notes or '' }}{% endif %}</textarea>
         </div>
         <div class="entry-actions">
             <button type="submit" class="btn btn-primary">{{ submit_label }}</button>
