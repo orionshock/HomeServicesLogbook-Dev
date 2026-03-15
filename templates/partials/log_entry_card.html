@@ -1,4 +1,8 @@
 <article class="timeline-entry timeline-entry-{{ log_mode }}">
+    {% if log_entry.title %}
+    <h3 class="entry-title">{{ log_entry.title }}</h3>
+    {% endif %}
+
     <p class="entry-meta"><strong>Created:</strong> {{ log_entry.created_at|replace("T", " ")|replace("Z", " UTC") }}</p>
     {% if log_mode == "full" and log_entry.updated_at %}
     <p class="entry-meta"><strong>Edited:</strong> {{ log_entry.updated_at|replace("T", " ")|replace("Z", " UTC") }}</p>
@@ -12,12 +16,6 @@
     {% endif %}
     {% elif log_mode == "compact" %}
     <p class="entry-body-compact">No note text.</p>
-    {% endif %}
-
-    {% if log_mode == "full" and log_entry.vendor_reference %}
-    <p><strong>Vendor Reference:</strong> {{ log_entry.vendor_reference }}</p>
-    {% elif log_mode == "compact" and log_entry.vendor_reference %}
-    <p class="entry-meta"><strong>Ref:</strong> {{ log_entry.vendor_reference }}</p>
     {% endif %}
 
     {% if log_mode == "full" and log_entry.rep_name %}

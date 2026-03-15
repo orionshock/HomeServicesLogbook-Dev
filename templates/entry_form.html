@@ -19,13 +19,13 @@
 
             <form id="entry-form" method="post" action="{{ form_action }}" enctype="multipart/form-data">
                 <div class="entry-meta-grid">
+                    <div class="form-field entry-meta-full-width">
+                        <label for="title" title="Optional">Title</label>
+                        <input type="text" id="title" name="title" placeholder="Short Title or Ticket Number" title="Optional" value="{% if entry %}{{ entry.title or '' }}{% endif %}">
+                    </div>
                     <div class="form-field compact-form-field">
                         <label for="rep_name" title="Optional">Rep Name</label>
                         <input type="text" id="rep_name" name="rep_name" title="Optional" value="{% if entry %}{{ entry.rep_name or '' }}{% endif %}">
-                    </div>
-                    <div class="form-field compact-form-field">
-                        <label for="vendor_reference" title="Optional">Vendor Reference</label>
-                        <input type="text" id="vendor_reference" name="vendor_reference" title="Optional" value="{% if entry %}{{ entry.vendor_reference or '' }}{% endif %}">
                     </div>
                 </div>
 

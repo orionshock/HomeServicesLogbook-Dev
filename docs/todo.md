@@ -14,7 +14,7 @@
 ### Log History Behavior
 - [ ] While editing an entry, hide that same entry from the history list.
 - [ ] Update each history card to use title as the primary line and created timestamp as subtitle.
-- [ ] Show only the 10 most recent entries.
+- [ ] Show only the 10 most recent entries. With a more button?
 - [ ] Make history panel scrollable and anchor it near the notes section bottom-right.
 - [ ] Let history panel grow when note body textarea expands, but only until scrolling is no longer needed.
 - [ ] Prevent awkward empty space in history panel if the note box becomes very tall.
@@ -45,7 +45,7 @@
   - [ ] Relative format.
 - [ ] Theme support (future).
 
-### Server-Side Settings (Open Questions)
+### Server-Side Settings / DB Management (Open Questions)
 - [ ] Should some settings be server-side instead of browser-local?
 - [ ] Label management and color settings.
 - [ ] Import / Export / Reset / Delete actions scoped by:

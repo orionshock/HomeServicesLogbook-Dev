@@ -359,6 +359,10 @@ h2 {
     gap: 10px;
 }
 
+.entry-meta-full-width {
+    grid-column: 1 / -1;
+}
+
 .compact-form-field input[type="text"] {
     padding: 7px 10px;
     font-size: 0.95rem;
