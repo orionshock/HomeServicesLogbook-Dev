@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% if mode == "edit" %}
+{% set page_title = "Edit Entry" %}
+{% else %}
+{% set page_title = "New Entry" %}
+{% endif %}
+
+{% block title %}{{ page_title }} — Home Services Logbook{% endblock %}
+
+{% block content %}
+<h1>{{ page_title }}</h1>
+
+<p>
+    Vendor: <a href="/vendor/{{ vendor.vendor_uid }}">{{ vendor.name }}</a>
+</p>
+<p>
+    <a href="/vendor/{{ vendor.vendor_uid }}">Back to Vendor</a>
+</p>
+
+<section class="content-section entry-edit-section">
+    <form id="entry-form" method="post" action="{{ form_action }}"{% if mode == "create" %} enctype="multipart/form-data"{% endif %}>
+        <div class="form-field">
+            <label for="body_text">Entry</label>
+            <textarea id="body_text" name="body_text" rows="8">{% if entry %}{{ entry.body_text or '' }}{% endif %}</textarea>
+        </div>
+        <div class="form-field">
+            <label for="vendor_reference">Vendor Reference{% if mode == "create" %} (optional){% endif %}</label>
+            <input type="text" id="vendor_reference" name="vendor_reference" value="{% if entry %}{{ entry.vendor_reference or '' }}{% endif %}">
+        </div>
+        <div class="form-field">
+            <label for="rep_name">Rep Name{% if mode == "create" %} (optional){% endif %}</label>
+            <input type="text" id="rep_name" name="rep_name" value="{% if entry %}{{ entry.rep_name or '' }}{% endif %}">
+        </div>
+
+        {% if mode == "create" %}
+        <div class="form-field attachment-field">
+            <label for="attachment">Attach Document (optional)</label>
+            <input type="file" id="attachment" name="attachment">
+            <p id="attachment-name" class="attachment-name">No file selected</p>
+        </div>
+
+        <div class="entry-actions">
+            <button type="submit" class="btn btn-primary">{{ submit_label }}</button>
+            <button type="button" id="attach-trigger" class="btn btn-secondary">Attach Document</button>
+            <button type="button" id="calendar-trigger" class="btn btn-secondary">Add Calendar Event</button>
+            <a href="/vendor/{{ vendor.vendor_uid }}" class="btn btn-secondary">Cancel</a>
+        </div>
+
+        <section id="calendar-panel" class="calendar-panel" hidden>
+            <h3>Calendar Event</h3>
+            <div class="form-field">
+                <label for="calendar_title">Title</label>
+                <input type="text" id="calendar_title" autocomplete="off">
+            </div>
+            <div class="calendar-grid">
+                <div class="form-field">
+                    <label for="calendar_date">Date</label>
+                    <input type="date" id="calendar_date">
+                </div>
+                <div class="form-field">
+                    <label for="calendar_time">Time (optional)</label>
+                    <input type="time" id="calendar_time">
+                </div>
+            </div>
+            <div class="form-field">
+                <label for="calendar_description">Description</label>
+                <textarea id="calendar_description" rows="4"></textarea>
+            </div>
+            <div class="entry-actions">
+                <button type="button" id="calendar-download" class="btn btn-primary">Download .ics</button>
+                <button type="button" id="calendar-cancel" class="btn btn-secondary">Cancel</button>
+            </div>
+        </section>
+        {% else %}
+        <div class="entry-actions">
+            <button type="submit" class="btn btn-primary">{{ submit_label }}</button>
+            <a href="/vendor/{{ vendor.vendor_uid }}" class="btn btn-secondary">Cancel</a>
+        </div>
+        {% endif %}
+    </form>
+</section>
+
+{% if mode == "create" %}
+<script src="/static/js/vendor_detail.js"></script>
+{% endif %}
+{% endblock %}

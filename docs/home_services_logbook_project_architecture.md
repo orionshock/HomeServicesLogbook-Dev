@@ -43,7 +43,7 @@ HomeServicesLogbook-Dev/
 │   ├── vendor_new.html  # New vendor form
 │   ├── vendor_detail.html  # Vendor page: details, entry form, timeline
 │   ├── vendor_edit.html    # Edit vendor reference data
-│   ├── entry_edit.html     # Edit an existing entry
+│   ├── entry_form.html     # Shared new/edit entry form page
 │   ├── 404.html         # Custom 404 page
 │   └── error.html       # Custom error page (4xx/5xx)
 ├── static/

@@ -11,6 +11,10 @@
                 <a href="/vendors">Back to Vendors</a>
                 <span aria-hidden="true">|</span>
                 <a href="/vendor/{{ vendor.vendor_uid }}/edit">Edit Vendor</a>
+                {% if not vendor.archived_at %}
+                <span aria-hidden="true">|</span>
+                <a href="/vendor/{{ vendor.vendor_uid }}/entries/new">New Entry</a>
+                {% endif %}
             </p>
         </div>
         {% if not vendor.archived_at %}
@@ -74,115 +78,61 @@
     </section>
     {% endif %}
 
-    <div class="vendor-main-grid">
-        <section class="content-section new-entry-section">
-            <h2>New Entry</h2>
-            {% if vendor.archived_at %}
+    <section class="content-section entry-timeline-section">
+        <div class="entry-actions">
+            {% if not vendor.archived_at %}
+            <a href="/vendor/{{ vendor.vendor_uid }}/entries/new" class="btn btn-primary">New Entry</a>
+            {% else %}
             <p>This vendor is archived. Unarchive the vendor to add new entries.</p>
-            {% else %}
-            <form id="entry-form" method="post" action="/vendor/{{ vendor.vendor_uid }}/entries" enctype="multipart/form-data">
-                <div class="form-field">
-                    <label for="body_text">Entry</label>
-                    <textarea id="body_text" name="body_text" rows="8"></textarea>
-                </div>
-                <div class="form-field">
-                    <label for="vendor_reference">Vendor Reference (optional)</label>
-                    <input type="text" id="vendor_reference" name="vendor_reference">
-                </div>
-                <div class="form-field">
-                    <label for="rep_name">Rep Name (optional)</label>
-                    <input type="text" id="rep_name" name="rep_name">
-                </div>
-                <div class="form-field attachment-field">
-                    <label for="attachment">Attach Document (optional)</label>
-                    <input type="file" id="attachment" name="attachment">
-                    <p id="attachment-name" class="attachment-name">No file selected</p>
-                </div>
-                <div class="entry-actions">
-                    <button type="submit" class="btn btn-primary">Save Entry</button>
-                    <button type="button" id="attach-trigger" class="btn btn-secondary">Attach Document</button>
-                    <button type="button" id="calendar-trigger" class="btn btn-secondary">Add Calendar Event</button>
-                </div>
-
-                <section id="calendar-panel" class="calendar-panel" hidden>
-                    <h3>Calendar Event</h3>
-                    <div class="form-field">
-                        <label for="calendar_title">Title</label>
-                        <input type="text" id="calendar_title" autocomplete="off">
-                    </div>
-                    <div class="calendar-grid">
-                        <div class="form-field">
-                            <label for="calendar_date">Date</label>
-                            <input type="date" id="calendar_date">
-                        </div>
-                        <div class="form-field">
-                            <label for="calendar_time">Time (optional)</label>
-                            <input type="time" id="calendar_time">
-                        </div>
-                    </div>
-                    <div class="form-field">
-                        <label for="calendar_description">Description</label>
-                        <textarea id="calendar_description" rows="4"></textarea>
-                    </div>
-                    <div class="entry-actions">
-                        <button type="button" id="calendar-download" class="btn btn-primary">Download .ics</button>
-                        <button type="button" id="calendar-cancel" class="btn btn-secondary">Cancel</button>
-                    </div>
-                </section>
-            </form>
             {% endif %}
-        </section>
+        </div>
 
-        <section class="content-section entry-timeline-section">
-            <h2>Entry Timeline</h2>
+        <h2>Entry Timeline</h2>
 
-            {% if entries %}
-            {% for entry in entries %}
-            <article class="timeline-entry">
-                <p class="entry-meta"><strong>Created:</strong> {{ entry.created_at|replace("T", " ")|replace("Z", " UTC") }}</p>
-                {% if entry.updated_at %}
-                <p class="entry-meta"><strong>Edited:</strong> {{ entry.updated_at|replace("T", " ")|replace("Z", " UTC") }}</p>
-                {% endif %}
-
-                {% if entry.body_text %}
-                <p>{{ entry.body_text }}</p>
-                {% endif %}
-
-                {% if entry.vendor_reference %}
-                <p><strong>Vendor Reference:</strong> {{ entry.vendor_reference }}</p>
-                {% endif %}
-
-                {% if entry.rep_name %}
-                <p><strong>Rep Name:</strong> {{ entry.rep_name }}</p>
-                {% endif %}
-
-                <p>
-                    <small><a href="/entry/{{ entry.entry_uid }}/edit">Edit Entry</a></small>
-                </p>
-
-                {% set entry_attachments = attachments_by_entry.get(entry.id, []) %}
-                {% if entry_attachments %}
-                <p><strong>Attachments:</strong></p>
-                <ul>
-                    {% for attachment in entry_attachments %}
-                    <li>
-                        <a href="/attachments/{{ attachment.attachment_uid }}">{{ attachment.original_filename }}</a>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-            </article>
-
-            {% if not loop.last %}
-            <hr>
+        {% if entries %}
+        {% for entry in entries %}
+        <article class="timeline-entry">
+            <p class="entry-meta"><strong>Created:</strong> {{ entry.created_at|replace("T", " ")|replace("Z", " UTC") }}</p>
+            {% if entry.updated_at %}
+            <p class="entry-meta"><strong>Edited:</strong> {{ entry.updated_at|replace("T", " ")|replace("Z", " UTC") }}</p>
             {% endif %}
-            {% endfor %}
-            {% else %}
-            <p>No entries yet. Add your first logbook entry above.</p>
+
+            {% if entry.body_text %}
+            <p>{{ entry.body_text }}</p>
             {% endif %}
-        </section>
-    </div>
+
+            {% if entry.vendor_reference %}
+            <p><strong>Vendor Reference:</strong> {{ entry.vendor_reference }}</p>
+            {% endif %}
+
+            {% if entry.rep_name %}
+            <p><strong>Rep Name:</strong> {{ entry.rep_name }}</p>
+            {% endif %}
+
+            <p>
+                <small><a href="/entry/{{ entry.entry_uid }}/edit">Edit Entry</a></small>
+            </p>
+
+            {% set entry_attachments = attachments_by_entry.get(entry.id, []) %}
+            {% if entry_attachments %}
+            <p><strong>Attachments:</strong></p>
+            <ul>
+                {% for attachment in entry_attachments %}
+                <li>
+                    <a href="/attachments/{{ attachment.attachment_uid }}">{{ attachment.original_filename }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </article>
+
+        {% if not loop.last %}
+        <hr>
+        {% endif %}
+        {% endfor %}
+        {% else %}
+        <p>No entries yet. Use New Entry to add the first logbook record.</p>
+        {% endif %}
+    </section>
 </div>
-
-<script src="/static/js/vendor_detail.js"></script>
 {% endblock %}

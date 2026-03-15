@@ -337,6 +337,31 @@ def vendor_detail(request: Request, vendor_uid: str):
     )
 
 
+@app.get("/vendor/{vendor_uid}/entries/new")
+def vendor_entry_new_form(request: Request, vendor_uid: str):
+    vendor = get_vendor_by_uid(vendor_uid)
+    if vendor is None:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    if vendor["archived_at"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Archived vendors cannot accept new entries. Unarchive vendor to continue.",
+        )
+
+    return _render_template(
+        request,
+        "entry_form.html",
+        {
+            "mode": "create",
+            "vendor": vendor,
+            "entry": None,
+            "form_action": f"/vendor/{vendor_uid}/entries",
+            "submit_label": "Save Entry",
+        },
+    )
+
+
 @app.get("/vendor/{vendor_uid}/edit")
 def vendor_edit_form(request: Request, vendor_uid: str):
     vendor = get_vendor_by_uid(vendor_uid)
@@ -410,7 +435,22 @@ def entry_edit_form(request: Request, entry_uid: str):
     if entry is None:
         raise HTTPException(status_code=404, detail="Entry not found")
 
-    return _render_template(request, "entry_edit.html", {"entry": entry})
+    vendor_context = {
+        "vendor_uid": entry["vendor_uid"],
+        "name": entry["vendor_name"],
+        "archived_at": None,
+    }
+    return _render_template(
+        request,
+        "entry_form.html",
+        {
+            "mode": "edit",
+            "vendor": vendor_context,
+            "entry": entry,
+            "form_action": f"/entry/{entry_uid}/edit",
+            "submit_label": "Save Entry Changes",
+        },
+    )
 
 
 @app.post("/entry/{entry_uid}/edit")
