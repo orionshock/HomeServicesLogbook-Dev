@@ -49,7 +49,7 @@ def _make_attachment_uid() -> str:
 
 
 def _resolve_current_actor(_request: Request) -> dict[str, str]:
-    # Temporary MVP actor resolution. Replace with real auth integration later.
+    # Temporary development actor resolution. Replace with real auth integration later.
     return {
         "actor_id": "devUser",
         "display_name": "devUser",
@@ -91,7 +91,7 @@ def _build_ics_content(title: str, event_date: str, event_time: str, description
     lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
-        "PRODID:-//Home Services Logbook//MVP//EN",
+        "PRODID:-//Home Services Logbook//Development//EN",
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
         "BEGIN:VEVENT",

@@ -162,7 +162,7 @@ It is acceptable to keep some flexible vendor data in JSON rather than separate 
 - Do not add frameworks or patterns “just in case.”
 
 ## Scope control
-This project should start with a small MVP.
+This project is now in active development.
 
 Prioritize:
 1. vendor records
@@ -171,7 +171,7 @@ Prioritize:
 4. document attachment
 5. simple ICS export
 
-Defer until later:
+Still defer until later unless explicitly requested:
 - advanced labeling/tagging
 - multi-database support
 - complex auth
