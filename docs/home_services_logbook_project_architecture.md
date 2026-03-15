@@ -47,7 +47,7 @@ HomeServicesLogbook-Dev/
 │   └── error.html       # Custom error page (4xx/5xx)
 ├── static/
 │   ├── css/app.css      # All application styles
-│   ├── js/vendor_detail.js  # Calendar panel, file attach, UX logic
+│   ├── js/entry_form.js     # Entry form UX: calendar panel, file attach, interaction timestamp handling
 │   └── favicon.png
 ├── uploads/             # Uploaded files (organized by date)
 ├── data/
