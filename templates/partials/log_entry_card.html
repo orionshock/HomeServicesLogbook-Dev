@@ -3,9 +3,14 @@
     <h3 class="entry-title">{{ log_entry.title }}</h3>
     {% endif %}
 
-    <p class="entry-meta"><strong>Created:</strong> {{ log_entry.created_at|replace("T", " ")|replace("Z", " UTC") }}</p>
+    {% if log_entry.interaction_at %}
+    <p class="entry-meta"><strong>Interaction:</strong> <time class="js-local-time" datetime="{{ log_entry.interaction_at }}">{{ log_entry.interaction_at }}</time></p>
+    <p class="entry-meta"><strong>Logged:</strong> <time class="js-local-time" datetime="{{ log_entry.created_at }}">{{ log_entry.created_at }}</time></p>
+    {% else %}
+    <p class="entry-meta"><strong>Logged:</strong> <time class="js-local-time" datetime="{{ log_entry.created_at }}">{{ log_entry.created_at }}</time></p>
+    {% endif %}
     {% if log_mode == "full" and log_entry.updated_at %}
-    <p class="entry-meta"><strong>Edited:</strong> {{ log_entry.updated_at|replace("T", " ")|replace("Z", " UTC") }}</p>
+    <p class="entry-meta"><strong>Edited:</strong> <time class="js-local-time" datetime="{{ log_entry.updated_at }}">{{ log_entry.updated_at }}</time></p>
     {% endif %}
 
     {% if log_entry.body_text %}

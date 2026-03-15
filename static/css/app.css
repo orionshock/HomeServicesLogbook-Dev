@@ -336,8 +336,28 @@ h2 {
     font-weight: 600;
 }
 
+.field-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.field-label-row label {
+    margin-bottom: 0;
+}
+
+.field-hint {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-weight: 400;
+    white-space: nowrap;
+}
+
 .form-field textarea,
 .form-field input[type="text"],
+.form-field input[type="datetime-local"],
 .form-field input[type="file"] {
     width: 100%;
     border: 1px solid var(--line);
@@ -366,6 +386,16 @@ h2 {
 .compact-form-field input[type="text"] {
     padding: 7px 10px;
     font-size: 0.95rem;
+}
+
+.compact-form-field input[type="datetime-local"] {
+    padding: 7px 10px;
+    font-size: 0.95rem;
+    min-height: 38px;
+}
+
+.form-field input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    opacity: 0.7;
 }
 
 .attachment-name {
@@ -554,6 +584,14 @@ hr {
 
     .entry-meta-grid {
         grid-template-columns: 1fr;
+    }
+
+    .field-label-row {
+        flex-wrap: wrap;
+    }
+
+    .field-hint {
+        white-space: normal;
     }
 
     .vendors-actions-row {

@@ -41,9 +41,9 @@ def init_db() -> None:
                 id               INTEGER PRIMARY KEY,
                 entry_uid        TEXT UNIQUE NOT NULL,
                 vendor_id        INTEGER NOT NULL,
-                entry_type       TEXT NOT NULL DEFAULT 'note',
-                body_text        TEXT,
                 title            TEXT,
+                interaction_at   TEXT,
+                body_text        TEXT,
                 rep_name         TEXT,
                 extra_json       TEXT,
                 created_at       TEXT NOT NULL,
@@ -271,8 +271,9 @@ def get_entry_by_uid(entry_uid: str) -> sqlite3.Row | None:
 def create_entry(
     entry_uid: str,
     vendor_id: int,
-    body_text: str | None,
     title: str | None,
+    interaction_at: str | None,
+    body_text: str | None,
     rep_name: str | None,
     created_by: str,
     created_at: str,
@@ -282,20 +283,30 @@ def create_entry(
         cursor = conn.execute(
             """
             INSERT INTO entries (
-                entry_uid, vendor_id, body_text, title,
-                rep_name, created_by, created_at
+                entry_uid, vendor_id, title, interaction_at,
+                body_text, rep_name, created_by, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (entry_uid, vendor_id, body_text, title, rep_name, created_by, created_at),
+            (
+                entry_uid,
+                vendor_id,
+                title,
+                interaction_at,
+                body_text,
+                rep_name,
+                created_by,
+                created_at,
+            ),
         )
         return cursor.lastrowid
 
 
 def update_entry_by_uid(
     entry_uid: str,
-    body_text: str | None,
     title: str | None,
+    interaction_at: str | None,
+    body_text: str | None,
     rep_name: str | None,
     updated_at: str,
     updated_by: str,
@@ -305,14 +316,15 @@ def update_entry_by_uid(
             """
             UPDATE entries
             SET
-                body_text = ?,
                 title = ?,
+                interaction_at = ?,
+                body_text = ?,
                 rep_name = ?,
                 updated_at = ?,
                 updated_by = ?
             WHERE entry_uid = ?
             """,
-            (body_text, title, rep_name, updated_at, updated_by, entry_uid),
+            (title, interaction_at, body_text, rep_name, updated_at, updated_by, entry_uid),
         )
 
 

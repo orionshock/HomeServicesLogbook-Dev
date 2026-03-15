@@ -57,8 +57,31 @@ def _resolve_current_actor(_request: Request) -> dict[str, str]:
     }
 
 
-def _now_utc() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _normalize_interaction_at_utc(interaction_at_utc: str) -> str | None:
+    raw_value = (interaction_at_utc or "").strip()
+    if not raw_value:
+        return None
+
+    parsed_iso = raw_value.replace("Z", "+00:00")
+    try:
+        parsed_dt = datetime.fromisoformat(parsed_iso)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="interaction_at must be a valid UTC ISO timestamp",
+        ) from exc
+
+    if parsed_dt.tzinfo is None or parsed_dt.utcoffset() != timedelta(0):
+        raise HTTPException(
+            status_code=400,
+            detail="interaction_at must be UTC (offset 00:00)",
+        )
+
+    return parsed_dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _make_stored_filename(original_name: str) -> str:
@@ -266,7 +289,7 @@ def _store_uploaded_attachment(upload: UploadFile, entry_id: int, actor: str) ->
         mime_type=upload.content_type,
         file_size=bytes_written,
         created_by=actor,
-        created_at=_now_utc(),
+        created_at=utc_now_iso(),
     )
 
 
@@ -392,7 +415,7 @@ def vendor_new_submit(
     clean_name = _normalize_required_text(name, "Vendor name")
     clean_portal_url = _normalize_portal_url(portal_url)
     vendor_uid = _make_vendor_uid(clean_name)
-    now = _now_utc()
+    now = utc_now_iso()
     create_vendor(
         vendor_uid=vendor_uid,
         name=clean_name,
@@ -449,7 +472,7 @@ def vendor_list(request: Request, show_archived: int | None = None):
 @app.post("/vendor/{vendor_uid}/archive")
 def vendor_archive(request: Request, vendor_uid: str):
     actor = request.state.current_actor["actor_id"]
-    now = _now_utc()
+    now = utc_now_iso()
     found = archive_vendor_by_uid(vendor_uid, archived_at=now, updated_by=actor)
     if not found:
         raise HTTPException(status_code=404, detail="Vendor not found")
@@ -459,7 +482,7 @@ def vendor_archive(request: Request, vendor_uid: str):
 @app.post("/vendor/{vendor_uid}/unarchive")
 def vendor_unarchive(request: Request, vendor_uid: str):
     actor = request.state.current_actor["actor_id"]
-    now = _now_utc()
+    now = utc_now_iso()
     found = unarchive_vendor_by_uid(vendor_uid, updated_at=now, updated_by=actor)
     if not found:
         raise HTTPException(status_code=404, detail="Vendor not found")
@@ -588,7 +611,7 @@ def vendor_edit_submit(
         security_pin=security_pin or None,
         service_location=service_location or None,
         vendor_notes=vendor_notes or None,
-        updated_at=_now_utc(),
+        updated_at=utc_now_iso(),
         updated_by=actor,
     )
     return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
@@ -658,6 +681,7 @@ def entry_edit_submit(
     entry_uid: str,
     body_text: str = Form(""),
     title: str = Form(""),
+    interaction_at: str = Form(""),
     rep_name: str = Form(""),
     remove_attachment_uids: list[str] | None = Form(None),
     attachments: list[UploadFile] | None = File(None),
@@ -673,10 +697,11 @@ def entry_edit_submit(
 
     update_entry_by_uid(
         entry_uid=entry_uid,
-        body_text=body_text or None,
         title=title or None,
+        interaction_at=_normalize_interaction_at_utc(interaction_at),
+        body_text=body_text or None,
         rep_name=rep_name or None,
-        updated_at=_now_utc(),
+        updated_at=utc_now_iso(),
         updated_by=actor,
     )
 
@@ -696,6 +721,7 @@ def create_vendor_entry(
     vendor_uid: str,
     body_text: str = Form(""),
     title: str = Form(""),
+    interaction_at: str = Form(""),
     rep_name: str = Form(""),
     attachments: list[UploadFile] | None = File(None),
 ):
@@ -717,11 +743,12 @@ def create_vendor_entry(
     entry_id = create_entry(
         entry_uid=_make_entry_uid(),
         vendor_id=vendor["id"],
-        body_text=body_text or None,
         title=title or None,
+        interaction_at=_normalize_interaction_at_utc(interaction_at),
+        body_text=body_text or None,
         rep_name=rep_name or None,
         created_by=actor,
-        created_at=_now_utc(),
+        created_at=utc_now_iso(),
     )
 
     _store_uploaded_attachments(new_attachments, entry_id=entry_id, actor=actor)

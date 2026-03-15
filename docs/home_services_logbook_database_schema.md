@@ -176,9 +176,9 @@ CREATE TABLE entries (
     id               INTEGER PRIMARY KEY,
     entry_uid        TEXT UNIQUE NOT NULL,
     vendor_id        INTEGER NOT NULL,
-    entry_type       TEXT NOT NULL DEFAULT 'note',
+    title            TEXT,
+    interaction_at   TEXT,
     body_text        TEXT,
-    vendor_reference TEXT,
     rep_name         TEXT,
     extra_json       TEXT,
     created_at       TEXT NOT NULL,
@@ -203,12 +203,11 @@ Example:
 
 20260311-164233-a84f19
 
-vendor_reference\
-Vendor provided reference such as:
+title\
+Optional short title for the log entry (for example, ticket number).
 
-case number\
-work order\
-invoice number
+interaction_at\
+Optional timestamp for when the real-world interaction occurred. Store as UTC.
 
 rep_name\
 Name of the human contact involved.

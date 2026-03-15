@@ -11,6 +11,8 @@
     var calendarDescription = document.getElementById("calendar_description");
     var calendarDownload = document.getElementById("calendar-download");
     var calendarCancel = document.getElementById("calendar-cancel");
+    var interactionAtLocalInput = document.getElementById("interaction_at_local");
+    var interactionAtUtcInput = document.getElementById("interaction_at");
     if (!form || !fileInput) {
         return;
     }
@@ -118,6 +120,61 @@
         return lastDot > 0 && lastDot < base.length - 1;
     }
 
+    function toDatetimeLocalValue(dateValue) {
+        var y = String(dateValue.getFullYear());
+        var m = String(dateValue.getMonth() + 1).padStart(2, "0");
+        var d = String(dateValue.getDate()).padStart(2, "0");
+        var hh = String(dateValue.getHours()).padStart(2, "0");
+        var mm = String(dateValue.getMinutes()).padStart(2, "0");
+        return y + "-" + m + "-" + d + "T" + hh + ":" + mm;
+    }
+
+    function setInteractionDefaults() {
+        if (!interactionAtLocalInput || !interactionAtUtcInput) {
+            return;
+        }
+
+        if (interactionAtLocalInput.value) {
+            return;
+        }
+
+        var utcValue = (interactionAtLocalInput.dataset.utcValue || interactionAtUtcInput.value || "").trim();
+        if (!utcValue) {
+            return;
+        }
+
+        var parsed = new Date(utcValue);
+        if (Number.isNaN(parsed.getTime())) {
+            return;
+        }
+
+        interactionAtLocalInput.value = toDatetimeLocalValue(parsed);
+        interactionAtUtcInput.value = utcValue;
+    }
+
+    function setInteractionUtcForSubmit() {
+        if (!interactionAtLocalInput || !interactionAtUtcInput) {
+            return true;
+        }
+
+        var localValue = (interactionAtLocalInput.value || "").trim();
+        if (!localValue) {
+            interactionAtUtcInput.value = "";
+            interactionAtLocalInput.setCustomValidity("");
+            return true;
+        }
+
+        var parsed = new Date(localValue);
+        if (Number.isNaN(parsed.getTime())) {
+            interactionAtLocalInput.setCustomValidity("Interaction Date is invalid.");
+            return false;
+        }
+
+        interactionAtUtcInput.value = parsed.toISOString().replace(".000Z", "Z");
+        interactionAtLocalInput.setCustomValidity("");
+        return true;
+    }
+
     function validateFileInput() {
         if (!fileInput.files || fileInput.files.length === 0) {
             fileInput.setCustomValidity("");
@@ -191,8 +248,14 @@
     }
 
     setAttachmentName();
+    setInteractionDefaults();
 
     form.addEventListener("submit", function (event) {
+        if (!setInteractionUtcForSubmit()) {
+            event.preventDefault();
+            interactionAtLocalInput.reportValidity();
+            return;
+        }
         if (!validateFileInput()) {
             event.preventDefault();
             fileInput.reportValidity();
