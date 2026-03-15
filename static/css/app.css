@@ -98,6 +98,14 @@ h2 {
     flex-wrap: wrap;
 }
 
+.vendors-actions-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 14px;
+}
+
 .details-list {
     margin: 0;
     padding-left: 20px;
@@ -317,6 +325,11 @@ hr {
 
     .entry-meta-grid {
         grid-template-columns: 1fr;
+    }
+
+    .vendors-actions-row {
+        flex-direction: column;
+        align-items: stretch;
     }
 
 }

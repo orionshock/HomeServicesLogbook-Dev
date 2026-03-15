@@ -4,14 +4,14 @@
 
 {% block content %}
 <h1>Vendors</h1>
-<p><a href="/vendors/new">+ Add Vendor</a></p>
-<p>
+<div class="vendors-actions-row">
+    <a href="/vendors/new" class="btn btn-primary">Add Vendor</a>
     {% if show_archived %}
-    <a href="/vendors">Hide Archived</a>
+    <a href="/vendors" class="btn btn-danger">Hide Archived</a>
     {% else %}
-    <a href="/vendors?show_archived=1">Show Archived</a>
+    <a href="/vendors?show_archived=1" class="btn btn-secondary">Show Archived</a>
     {% endif %}
-</p>
+</div>
 
 {% if vendors %}
 <ul>
