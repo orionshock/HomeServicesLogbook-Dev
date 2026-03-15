@@ -1,0 +1,63 @@
+<section class="content-section vendor-header-details-card">
+    <div class="vendor-header-main">
+        <h1>{{ vendor.name }}{% if vendor.archived_at %} <span class="archived-badge">Archived</span>{% endif %}</h1>
+
+        <ul class="details-list vendor-details-list">
+            {% if vendor.category %}
+            <li><strong>Category:</strong> {{ vendor.category }}</li>
+            {% endif %}
+
+            {% if vendor.account_number %}
+            <li><strong>Account Number:</strong> {{ vendor.account_number }}</li>
+            {% endif %}
+
+            {% if vendor.name_on_account %}
+            <li><strong>Name on Account:</strong> {{ vendor.name_on_account }}</li>
+            {% endif %}
+
+            {% if vendor.portal_url %}
+            <li><strong>Portal URL:</strong> <a href="{{ vendor.portal_url }}" target="_blank" rel="noopener noreferrer">{{ vendor.portal_url }}</a></li>
+            {% endif %}
+
+            {% if vendor.portal_username %}
+            <li><strong>Portal Username:</strong> {{ vendor.portal_username }}</li>
+            {% endif %}
+
+            {% if vendor.phone_on_file %}
+            <li><strong>Phone on File:</strong> {{ vendor.phone_on_file }}</li>
+            {% endif %}
+
+            {% if vendor.security_pin %}
+            <li><strong>Security PIN:</strong> {{ vendor.security_pin }}</li>
+            {% endif %}
+
+            {% if vendor.service_location %}
+            <li><strong>Service Location:</strong> {{ vendor.service_location }}</li>
+            {% endif %}
+
+            {% if vendor.vendor_notes %}
+            <li><strong>Vendor Notes:</strong> {{ vendor.vendor_notes }}</li>
+            {% endif %}
+        </ul>
+    </div>
+
+    {% if show_actions %}
+    <div class="vendor-overflow-actions">
+        <details class="overflow-menu">
+            <summary class="overflow-trigger" aria-label="Vendor actions">...</summary>
+            <div class="overflow-menu-panel">
+                <a href="/vendor/{{ vendor.vendor_uid }}/edit" class="btn btn-secondary">Edit Vendor</a>
+                {% if not vendor.archived_at %}
+                <form method="post" action="/vendor/{{ vendor.vendor_uid }}/archive" class="overflow-form">
+                    <button type="submit" class="btn btn-danger">Archive Vendor</button>
+                </form>
+                {% else %}
+                <form method="post" action="/vendor/{{ vendor.vendor_uid }}/unarchive" class="overflow-form">
+                    <button type="submit" class="btn btn-secondary">Unarchive Vendor</button>
+                </form>
+                {% endif %}
+            </div>
+        </details>
+    </div>
+    {% endif %}
+</section>

@@ -98,6 +98,116 @@ h2 {
     flex-wrap: wrap;
 }
 
+.vendor-header-details-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 0;
+}
+
+.vendor-header-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.vendor-details-list {
+    margin-top: 10px;
+}
+
+.vendor-overflow-actions {
+    flex-shrink: 0;
+}
+
+.overflow-menu {
+    position: relative;
+}
+
+.overflow-trigger {
+    list-style: none;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 4px 10px;
+    background: var(--surface-strong);
+    font-weight: 700;
+    line-height: 1;
+}
+
+.overflow-trigger::-webkit-details-marker {
+    display: none;
+}
+
+.overflow-menu-panel {
+    position: absolute;
+    right: 0;
+    margin-top: 6px;
+    min-width: 170px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 10;
+}
+
+.overflow-form {
+    margin: 0;
+}
+
+.overflow-form .btn,
+.overflow-menu-panel .btn {
+    width: 100%;
+    text-align: center;
+}
+
+.vendor-header-actions-row {
+    display: flex;
+    justify-content: flex-end;
+    margin: 8px 0 14px;
+}
+
+.entry-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.entry-workflow-page .vendor-header-details-card {
+    margin-bottom: 14px;
+}
+
+.entry-form-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 14px;
+    align-items: start;
+}
+
+.entry-form-primary,
+.entry-history-sidebar {
+    margin-bottom: 0;
+}
+
+.entry-history-sidebar h2 {
+    margin-bottom: 8px;
+}
+
+.timeline-entry-compact {
+    padding: 9px 10px;
+}
+
+.timeline-entry-compact p {
+    margin: 0 0 6px;
+}
+
+.entry-body-compact {
+    color: var(--text);
+    font-size: 0.95rem;
+}
+
 .vendors-actions-row {
     display: flex;
     justify-content: space-between;
@@ -373,6 +483,20 @@ hr {
 @media (max-width: 900px) {
     .vendor-header-card {
         flex-direction: column;
+    }
+
+    .vendor-header-details-card {
+        flex-direction: column;
+    }
+
+    .vendor-overflow-actions {
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .entry-form-layout {
+        grid-template-columns: 1fr;
     }
 
     .app-header {

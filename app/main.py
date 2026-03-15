@@ -488,6 +488,11 @@ def vendor_entry_new_form(request: Request, vendor_uid: str):
             detail="Archived vendors cannot accept new entries. Unarchive vendor to continue.",
         )
 
+    entries = list_entries_for_vendor(vendor["id"])
+    attachments_by_entry: dict[int, list] = {}
+    for item in list_attachments_for_entry_ids([e["id"] for e in entries]):
+        attachments_by_entry.setdefault(item["entry_id"], []).append(item)
+
     return _render_template(
         request,
         "entry_form.html",
@@ -496,6 +501,8 @@ def vendor_entry_new_form(request: Request, vendor_uid: str):
             "vendor": vendor,
             "entry": None,
             "entry_attachments": [],
+            "entries": entries,
+            "attachments_by_entry": attachments_by_entry,
             "form_action": f"/vendor/{vendor_uid}/entries",
             "submit_label": "Save Entry",
         },
@@ -584,21 +591,26 @@ def entry_edit_form(request: Request, entry_uid: str):
     if entry is None:
         raise HTTPException(status_code=404, detail="Entry not found")
 
-    entry_attachments = list_attachments_for_entry_id(entry["id"])
+    vendor = get_vendor_by_uid(entry["vendor_uid"])
+    if vendor is None:
+        raise HTTPException(status_code=404, detail="Vendor not found")
 
-    vendor_context = {
-        "vendor_uid": entry["vendor_uid"],
-        "name": entry["vendor_name"],
-        "archived_at": None,
-    }
+    entry_attachments = list_attachments_for_entry_id(entry["id"])
+    entries = list_entries_for_vendor(vendor["id"])
+    attachments_by_entry: dict[int, list] = {}
+    for item in list_attachments_for_entry_ids([e["id"] for e in entries]):
+        attachments_by_entry.setdefault(item["entry_id"], []).append(item)
+
     return _render_template(
         request,
         "entry_form.html",
         {
             "mode": "edit",
-            "vendor": vendor_context,
+            "vendor": vendor,
             "entry": entry,
             "entry_attachments": entry_attachments,
+            "entries": entries,
+            "attachments_by_entry": attachments_by_entry,
             "form_action": f"/entry/{entry_uid}/edit",
             "submit_label": "Save Entry Changes",
         },
