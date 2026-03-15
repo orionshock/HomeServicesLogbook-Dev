@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Request Error — Home Services Logbook{% endblock %}
+
+{% block content %}
+<section class="content-section message-card">
+    <h1>Request Error</h1>
+    <p><strong>Status:</strong> {{ status_code or 500 }}</p>
+    <p>{{ message or "Something went wrong while processing your request." }}</p>
+    <p><a href="/">Go Home</a> | <a href="/vendors">Go to Vendors</a></p>
+</section>
+{% endblock %}

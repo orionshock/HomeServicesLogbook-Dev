@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -124,6 +125,14 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 templates = Jinja2Templates(directory="templates")
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+
+
+def _normalize_required_text(value: str, field_name: str) -> str:
+    normalized = (value or "").strip()
+    if not normalized:
+        raise HTTPException(status_code=400, detail=f"{field_name} is required")
+    return normalized
 
 
 def _render_template(request: Request, template_name: str, context: dict | None = None):
@@ -134,6 +143,65 @@ def _render_template(request: Request, template_name: str, context: dict | None 
     if context:
         payload.update(context)
     return templates.TemplateResponse(template_name, payload)
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    status_code = exc.status_code
+    if status_code == 404:
+        response = _render_template(
+            request,
+            "404.html",
+            {"message": str(exc.detail or "The requested page could not be found.")},
+        )
+        response.status_code = 404
+        return response
+
+    if status_code >= 400:
+        response = _render_template(
+            request,
+            "error.html",
+            {
+                "status_code": status_code,
+                "message": str(exc.detail or "The request could not be processed."),
+            },
+        )
+        response.status_code = status_code
+        return response
+
+    return _render_template(
+        request,
+        "error.html",
+        {"status_code": 500, "message": "An unexpected error occurred."},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, _exc: RequestValidationError):
+    response = _render_template(
+        request,
+        "error.html",
+        {
+            "status_code": 400,
+            "message": "Some form fields were missing or invalid.",
+        },
+    )
+    response.status_code = 400
+    return response
+
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, _exc: Exception):
+    response = _render_template(
+        request,
+        "error.html",
+        {
+            "status_code": 500,
+            "message": "An unexpected error occurred. Please try again.",
+        },
+    )
+    response.status_code = 500
+    return response
 
 
 @app.middleware("http")
@@ -162,7 +230,8 @@ def vendor_new_submit(
     vendor_notes: str = Form(""),
 ):
     actor = request.state.current_actor["actor_id"]
-    vendor_uid = _make_vendor_uid(name)
+    clean_name = _normalize_required_text(name, "Vendor name")
+    vendor_uid = _make_vendor_uid(clean_name)
     now = _now_utc()
     with get_connection() as conn:
         conn.execute(
@@ -172,7 +241,7 @@ def vendor_new_submit(
             """,
             (
                 vendor_uid,
-                name,
+                clean_name,
                 category or None,
                 account_number or None,
                 portal_url or None,
@@ -317,6 +386,7 @@ def vendor_edit_submit(
     vendor_notes: str = Form(""),
 ):
     actor = request.state.current_actor["actor_id"]
+    clean_name = _normalize_required_text(name, "Vendor name")
 
     with get_connection() as conn:
         exists = conn.execute(
@@ -346,7 +416,7 @@ def vendor_edit_submit(
             WHERE vendor_uid = ?
             """,
             (
-                name,
+                clean_name,
                 category or None,
                 account_number or None,
                 name_on_account or None,
@@ -529,6 +599,12 @@ def create_vendor_entry(
             disk_path = subdir / stored_filename
             file_bytes = attachment.file.read()
 
+            if len(file_bytes) > MAX_UPLOAD_BYTES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Attachment exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)} MB size limit",
+                )
+
             with disk_path.open("wb") as out:
                 out.write(file_bytes)
 
@@ -570,7 +646,7 @@ def calendar_export_ics(
     event_time: str = Form(""),
     description: str = Form(""),
 ):
-    clean_title = title.strip()
+    clean_title = _normalize_required_text(title, "Calendar title")
     clean_date = event_date.strip()
     clean_time = event_time.strip()
     clean_description = description.strip()

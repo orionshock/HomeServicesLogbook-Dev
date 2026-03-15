@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found — Home Services Logbook{% endblock %}
+
+{% block content %}
+<section class="content-section message-card">
+    <h1>Page Not Found</h1>
+    <p>{{ message or "The requested page could not be found." }}</p>
+    <p><a href="/">Go Home</a> | <a href="/vendors">Go to Vendors</a></p>
+</section>
+{% endblock %}
