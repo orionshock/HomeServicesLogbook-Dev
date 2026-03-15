@@ -10,6 +10,10 @@
     <a href="/vendor/{{ vendor.vendor_uid }}/edit">Edit Vendor</a>
 </p>
 
+<form method="post" action="/vendor/{{ vendor.vendor_uid }}/archive">
+    <button type="submit">Archive Vendor</button>
+</form>
+
 <section class="content-section vendor-details-section">
     <h2>Vendor Details</h2>
     <ul>

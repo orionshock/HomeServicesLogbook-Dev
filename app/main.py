@@ -129,12 +129,57 @@ def vendor_new_submit(
 
 
 @app.get("/vendors")
-def vendor_list(request: Request):
+def vendor_list(request: Request, show_archived: int = 0):
+    include_archived = show_archived == 1
+
     with get_connection() as conn:
-        vendors = conn.execute(
-            "SELECT * FROM vendors WHERE archived_at IS NULL ORDER BY name"
-        ).fetchall()
-    return _render_template(request, "vendors.html", {"vendors": vendors})
+        if include_archived:
+            vendors = conn.execute(
+                "SELECT * FROM vendors ORDER BY archived_at IS NOT NULL, name"
+            ).fetchall()
+        else:
+            vendors = conn.execute(
+                "SELECT * FROM vendors WHERE archived_at IS NULL ORDER BY name"
+            ).fetchall()
+
+    return _render_template(
+        request,
+        "vendors.html",
+        {"vendors": vendors, "show_archived": include_archived},
+    )
+
+
+@app.post("/vendor/{vendor_uid}/archive")
+def vendor_archive(request: Request, vendor_uid: str):
+    actor = request.state.current_actor["actor_id"]
+
+    with get_connection() as conn:
+        exists = conn.execute(
+            "SELECT id FROM vendors WHERE vendor_uid = ?",
+            (vendor_uid,),
+        ).fetchone()
+
+        if exists is None:
+            raise HTTPException(status_code=404, detail="Vendor not found")
+
+        conn.execute(
+            """
+            UPDATE vendors
+            SET
+                archived_at = ?,
+                updated_at = ?,
+                updated_by = ?
+            WHERE vendor_uid = ?
+            """,
+            (
+                _now_utc(),
+                _now_utc(),
+                actor,
+                vendor_uid,
+            ),
+        )
+
+    return RedirectResponse(url="/vendors", status_code=303)
 
 
 @app.get("/vendor/{vendor_uid}")

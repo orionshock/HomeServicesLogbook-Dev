@@ -4,5 +4,12 @@
 			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+		"chat.tools.terminal.autoApprove": {
+			"/^c:/Users/orion/HomeServicesLogbook-Dev/\\.venv/Scripts/python\\.exe -m uvicorn app\\.main:app --reload$/": {
+				"approve": true,
+				"matchCommandLine": true
+			}
+		}
+	}
 }
