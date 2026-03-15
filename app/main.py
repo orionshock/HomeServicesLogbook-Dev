@@ -1,10 +1,10 @@
 import re
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -55,6 +55,62 @@ def _sanitize_original_filename(filename: str) -> str:
     sanitized = re.sub(r"_+", "_", sanitized)
     sanitized = sanitized.strip("._")
     return (sanitized or "uploaded-file")[:255]
+
+
+def _escape_ics_text(value: str) -> str:
+    escaped = (value or "").replace("\\", "\\\\")
+    escaped = escaped.replace(";", "\\;").replace(",", "\\,")
+    escaped = escaped.replace("\r\n", "\\n").replace("\n", "\\n")
+    return escaped
+
+
+def _build_ics_content(title: str, event_date: str, event_time: str, description: str) -> str:
+    dtstamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    event_uid = f"{uuid.uuid4().hex}@homeserviceslogbook.local"
+    parsed_date = datetime.strptime(event_date, "%Y-%m-%d")
+
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Home Services Logbook//MVP//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "BEGIN:VEVENT",
+        f"UID:{event_uid}",
+        f"DTSTAMP:{dtstamp}",
+        f"SUMMARY:{_escape_ics_text(title)}",
+    ]
+
+    if event_time:
+        parsed_time = datetime.strptime(event_time, "%H:%M")
+        start_dt = datetime(
+            year=parsed_date.year,
+            month=parsed_date.month,
+            day=parsed_date.day,
+            hour=parsed_time.hour,
+            minute=parsed_time.minute,
+        )
+        end_dt = start_dt + timedelta(hours=1)
+        lines.append(f"DTSTART:{start_dt.strftime('%Y%m%dT%H%M00')}")
+        lines.append(f"DTEND:{end_dt.strftime('%Y%m%dT%H%M00')}")
+    else:
+        end_date = parsed_date + timedelta(days=1)
+        lines.append(f"DTSTART;VALUE=DATE:{parsed_date.strftime('%Y%m%d')}")
+        lines.append(f"DTEND;VALUE=DATE:{end_date.strftime('%Y%m%d')}")
+
+    if description:
+        lines.append(f"DESCRIPTION:{_escape_ics_text(description)}")
+
+    lines.extend([
+        "END:VEVENT",
+        "END:VCALENDAR",
+    ])
+    return "\r\n".join(lines) + "\r\n"
+
+
+def _slugify_for_filename(value: str, fallback: str = "calendar-event") -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", (value or "").lower()).strip("-")
+    return (slug[:40] or fallback)
 
 
 @asynccontextmanager
@@ -505,3 +561,39 @@ def create_vendor_entry(
             )
 
     return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
+
+
+@app.post("/calendar/export")
+def calendar_export_ics(
+    title: str = Form(...),
+    event_date: str = Form(...),
+    event_time: str = Form(""),
+    description: str = Form(""),
+):
+    clean_title = title.strip()
+    clean_date = event_date.strip()
+    clean_time = event_time.strip()
+    clean_description = description.strip()
+
+    if not clean_title:
+        raise HTTPException(status_code=400, detail="Calendar title is required")
+
+    try:
+        datetime.strptime(clean_date, "%Y-%m-%d")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="event_date must use YYYY-MM-DD format") from exc
+
+    if clean_time:
+        try:
+            datetime.strptime(clean_time, "%H:%M")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="event_time must use HH:MM format") from exc
+
+    ics_body = _build_ics_content(clean_title, clean_date, clean_time, clean_description)
+    file_name = f"{_slugify_for_filename(clean_title)}-{clean_date}.ics"
+
+    return Response(
+        content=ics_body,
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{file_name}"'},
+    )

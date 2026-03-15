@@ -154,6 +154,25 @@ h2 {
     margin-top: 4px;
 }
 
+.calendar-panel {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f8f3e9;
+}
+
+.calendar-panel h3 {
+    margin: 0 0 10px;
+    font-size: 1.05rem;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+}
+
 .btn {
     border: 1px solid transparent;
     border-radius: 8px;
@@ -234,5 +253,9 @@ hr {
     .app-header {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .calendar-grid {
+        grid-template-columns: 1fr;
     }
 }

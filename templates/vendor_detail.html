@@ -86,8 +86,34 @@
                 <div class="entry-actions">
                     <button type="submit" class="btn btn-primary">Save Entry</button>
                     <button type="button" id="attach-trigger" class="btn btn-secondary">Attach Document</button>
-                    <button type="button" class="btn btn-secondary" disabled title="Calendar export is added in Phase 15">Add Calendar Event</button>
+                    <button type="button" id="calendar-trigger" class="btn btn-secondary">Add Calendar Event</button>
                 </div>
+
+                <section id="calendar-panel" class="calendar-panel" hidden>
+                    <h3>Calendar Event</h3>
+                    <div class="form-field">
+                        <label for="calendar_title">Title</label>
+                        <input type="text" id="calendar_title" autocomplete="off">
+                    </div>
+                    <div class="calendar-grid">
+                        <div class="form-field">
+                            <label for="calendar_date">Date</label>
+                            <input type="date" id="calendar_date">
+                        </div>
+                        <div class="form-field">
+                            <label for="calendar_time">Time (optional)</label>
+                            <input type="time" id="calendar_time">
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label for="calendar_description">Description</label>
+                        <textarea id="calendar_description" rows="4"></textarea>
+                    </div>
+                    <div class="entry-actions">
+                        <button type="button" id="calendar-download" class="btn btn-primary">Download .ics</button>
+                        <button type="button" id="calendar-cancel" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </section>
             </form>
         </section>
 
