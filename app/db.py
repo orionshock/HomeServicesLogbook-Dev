@@ -195,6 +195,26 @@ def archive_vendor_by_uid(vendor_uid: str, archived_at: str, updated_by: str) ->
         return True
 
 
+def unarchive_vendor_by_uid(vendor_uid: str, updated_at: str, updated_by: str) -> bool:
+    """Returns False if the vendor does not exist."""
+    with get_connection() as conn:
+        exists = conn.execute(
+            "SELECT id FROM vendors WHERE vendor_uid = ?",
+            (vendor_uid,),
+        ).fetchone()
+        if exists is None:
+            return False
+        conn.execute(
+            """
+            UPDATE vendors
+            SET archived_at = NULL, updated_at = ?, updated_by = ?
+            WHERE vendor_uid = ?
+            """,
+            (updated_at, updated_by, vendor_uid),
+        )
+        return True
+
+
 # ---------------------------------------------------------------------------
 # Entry helpers
 # ---------------------------------------------------------------------------

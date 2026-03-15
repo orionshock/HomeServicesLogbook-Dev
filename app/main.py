@@ -3,6 +3,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.exceptions import RequestValidationError
@@ -23,6 +24,7 @@ from app.db import (
     list_attachments_for_entry_ids,
     list_entries_for_vendor,
     list_vendors,
+    unarchive_vendor_by_uid,
     update_entry_by_uid,
     update_vendor_by_uid,
 )
@@ -149,6 +151,27 @@ def _normalize_required_text(value: str, field_name: str) -> str:
     return normalized
 
 
+def _normalize_portal_url(value: str) -> str | None:
+    normalized = (value or "").strip()
+    if not normalized:
+        return None
+
+    parsed = urlparse(normalized)
+    if parsed.scheme.lower() not in {"http", "https"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Portal URL must start with http:// or https://",
+        )
+
+    if not parsed.netloc:
+        raise HTTPException(
+            status_code=400,
+            detail="Portal URL must include a valid host",
+        )
+
+    return normalized
+
+
 def _render_template(request: Request, template_name: str, context: dict | None = None):
     payload = {
         "request": request,
@@ -245,6 +268,7 @@ def vendor_new_submit(
 ):
     actor = request.state.current_actor["actor_id"]
     clean_name = _normalize_required_text(name, "Vendor name")
+    clean_portal_url = _normalize_portal_url(portal_url)
     vendor_uid = _make_vendor_uid(clean_name)
     now = _now_utc()
     create_vendor(
@@ -252,7 +276,7 @@ def vendor_new_submit(
         name=clean_name,
         category=category or None,
         account_number=account_number or None,
-        portal_url=portal_url or None,
+        portal_url=clean_portal_url,
         vendor_notes=vendor_notes or None,
         created_at=now,
         created_by=actor,
@@ -279,6 +303,16 @@ def vendor_archive(request: Request, vendor_uid: str):
     if not found:
         raise HTTPException(status_code=404, detail="Vendor not found")
     return RedirectResponse(url="/vendors", status_code=303)
+
+
+@app.post("/vendor/{vendor_uid}/unarchive")
+def vendor_unarchive(request: Request, vendor_uid: str):
+    actor = request.state.current_actor["actor_id"]
+    now = _now_utc()
+    found = unarchive_vendor_by_uid(vendor_uid, updated_at=now, updated_by=actor)
+    if not found:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
 
 
 @app.get("/vendor/{vendor_uid}")
@@ -329,6 +363,7 @@ def vendor_edit_submit(
 ):
     actor = request.state.current_actor["actor_id"]
     clean_name = _normalize_required_text(name, "Vendor name")
+    clean_portal_url = _normalize_portal_url(portal_url)
     if get_vendor_by_uid(vendor_uid) is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
     update_vendor_by_uid(
@@ -337,7 +372,7 @@ def vendor_edit_submit(
         category=category or None,
         account_number=account_number or None,
         name_on_account=name_on_account or None,
-        portal_url=portal_url or None,
+        portal_url=clean_portal_url,
         portal_username=portal_username or None,
         phone_on_file=phone_on_file or None,
         security_pin=security_pin or None,
@@ -415,6 +450,12 @@ def create_vendor_entry(
     if vendor is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
 
+    if vendor["archived_at"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Archived vendors cannot accept new entries. Unarchive vendor to continue.",
+        )
+
     entry_id = create_entry(
         entry_uid=_make_entry_uid(),
         vendor_id=vendor["id"],
@@ -433,9 +474,17 @@ def create_vendor_entry(
                 detail="Attachment filename must include an extension",
             )
 
+        declared_size = getattr(attachment, "size", None)
+        if declared_size is not None and declared_size > MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Attachment exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)} MB size limit",
+            )
+
         now = datetime.now(timezone.utc)
-        subdir = Path("uploads") / now.strftime("%Y") / now.strftime("%m")
-        subdir.mkdir(parents=True, exist_ok=True)
+        relative_dir = Path("uploads") / now.strftime("%Y") / now.strftime("%m")
+        absolute_dir = BASE_DIR / relative_dir
+        absolute_dir.mkdir(parents=True, exist_ok=True)
 
         original_filename = _sanitize_original_filename(attachment.filename)
         if not Path(original_filename).suffix:
@@ -445,26 +494,43 @@ def create_vendor_entry(
             )
 
         stored_filename = _make_stored_filename(original_filename)
-        disk_path = subdir / stored_filename
-        file_bytes = attachment.file.read()
+        relative_path = relative_dir / stored_filename
+        disk_path = absolute_dir / stored_filename
 
-        if len(file_bytes) > MAX_UPLOAD_BYTES:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Attachment exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)} MB size limit",
-            )
-
-        with disk_path.open("wb") as out:
-            out.write(file_bytes)
+        bytes_written = 0
+        chunk_size = 1024 * 1024
+        try:
+            with disk_path.open("wb") as out:
+                while True:
+                    chunk = attachment.file.read(chunk_size)
+                    if not chunk:
+                        break
+                    bytes_written += len(chunk)
+                    if bytes_written > MAX_UPLOAD_BYTES:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Attachment exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)} MB size limit",
+                        )
+                    out.write(chunk)
+        except HTTPException:
+            if disk_path.exists():
+                disk_path.unlink()
+            raise
+        except Exception:
+            if disk_path.exists():
+                disk_path.unlink()
+            raise
+        finally:
+            attachment.file.close()
 
         create_attachment(
             attachment_uid=_make_attachment_uid(),
             entry_id=entry_id,
             original_filename=original_filename,
             stored_filename=stored_filename,
-            relative_path=str(disk_path).replace("\\", "/"),
+            relative_path=str(relative_path).replace("\\", "/"),
             mime_type=attachment.content_type,
-            file_size=len(file_bytes),
+            file_size=bytes_written,
             created_by=actor,
             created_at=_now_utc(),
         )

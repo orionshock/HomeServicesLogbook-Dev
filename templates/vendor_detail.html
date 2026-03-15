@@ -17,6 +17,10 @@
         <form method="post" action="/vendor/{{ vendor.vendor_uid }}/archive" class="archive-form">
             <button type="submit" class="btn btn-danger">Archive Vendor</button>
         </form>
+        {% else %}
+        <form method="post" action="/vendor/{{ vendor.vendor_uid }}/unarchive" class="archive-form">
+            <button type="submit" class="btn btn-secondary">Unarchive Vendor</button>
+        </form>
         {% endif %}
     </section>
 
@@ -73,6 +77,9 @@
     <div class="vendor-main-grid">
         <section class="content-section new-entry-section">
             <h2>New Entry</h2>
+            {% if vendor.archived_at %}
+            <p>This vendor is archived. Unarchive the vendor to add new entries.</p>
+            {% else %}
             <form id="entry-form" method="post" action="/vendor/{{ vendor.vendor_uid }}/entries" enctype="multipart/form-data">
                 <div class="form-field">
                     <label for="body_text">Entry</label>
@@ -123,6 +130,7 @@
                     </div>
                 </section>
             </form>
+            {% endif %}
         </section>
 
         <section class="content-section entry-timeline-section">
