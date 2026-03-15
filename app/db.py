@@ -303,7 +303,7 @@ def get_attachment_by_uid(attachment_uid: str) -> sqlite3.Row | None:
     with get_connection() as conn:
         return conn.execute(
             """
-            SELECT attachment_uid, original_filename, relative_path, mime_type
+            SELECT attachment_uid, entry_id, original_filename, relative_path, mime_type
             FROM attachments
             WHERE attachment_uid = ?
             """,
@@ -311,16 +311,33 @@ def get_attachment_by_uid(attachment_uid: str) -> sqlite3.Row | None:
         ).fetchone()
 
 
+def list_attachments_for_entry_id(entry_id: int) -> list[sqlite3.Row]:
+    with get_connection() as conn:
+        return conn.execute(
+            """
+            SELECT id, attachment_uid, entry_id, original_filename, relative_path, mime_type, file_size, created_at
+            FROM attachments
+            WHERE entry_id = ?
+            ORDER BY id ASC
+            """,
+            (entry_id,),
+        ).fetchall()
+
+
+# NOTE:
+# This dynamically generates "?, ?, ?" placeholders for a parameterized IN clause.
+# Only placeholder tokens are interpolated, never user input.
+# The actual values are still bound safely through sqlite parameters.
 def list_attachments_for_entry_ids(entry_ids: list[int]) -> list[sqlite3.Row]:
     if not entry_ids:
         return []
     with get_connection() as conn:
-        placeholders = ",".join("?" for _ in entry_ids)
+        param_placeholders  = ",".join("?" for _ in entry_ids)
         return conn.execute(
             f"""
             SELECT attachment_uid, entry_id, original_filename
             FROM attachments
-            WHERE entry_id IN ({placeholders})
+            WHERE entry_id IN ({param_placeholders})
             ORDER BY id ASC
             """,
             tuple(entry_ids),
@@ -352,3 +369,23 @@ def create_attachment(
                 relative_path, mime_type, file_size, created_by, created_at,
             ),
         )
+
+
+def delete_attachment_by_uid_for_entry(entry_id: int, attachment_uid: str) -> sqlite3.Row | None:
+    with get_connection() as conn:
+        attachment = conn.execute(
+            """
+            SELECT id, attachment_uid, entry_id, original_filename, relative_path, mime_type
+            FROM attachments
+            WHERE entry_id = ? AND attachment_uid = ?
+            """,
+            (entry_id, attachment_uid),
+        ).fetchone()
+        if attachment is None:
+            return None
+
+        conn.execute(
+            "DELETE FROM attachments WHERE id = ?",
+            (attachment["id"],),
+        )
+        return attachment

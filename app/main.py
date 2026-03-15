@@ -17,10 +17,12 @@ from app.db import (
     create_attachment,
     create_entry,
     create_vendor,
+    delete_attachment_by_uid_for_entry,
     get_attachment_by_uid,
     get_entry_by_uid,
     get_vendor_by_uid,
     init_db,
+    list_attachments_for_entry_id,
     list_attachments_for_entry_ids,
     list_entries_for_vendor,
     list_vendors,
@@ -170,6 +172,103 @@ def _normalize_portal_url(value: str) -> str | None:
         )
 
     return normalized
+
+
+def _validate_attachment_upload(upload: UploadFile) -> None:
+    raw_name = Path(upload.filename or "").name
+    if not Path(raw_name).suffix:
+        raise HTTPException(
+            status_code=400,
+            detail="Attachment filename must include an extension",
+        )
+
+    declared_size = getattr(upload, "size", None)
+    if declared_size is not None and declared_size > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Attachment exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)} MB size limit",
+        )
+
+
+def _get_submitted_attachments(attachments: list[UploadFile] | None) -> list[UploadFile]:
+    if not attachments:
+        return []
+    return [upload for upload in attachments if upload and upload.filename]
+
+
+def _delete_attachment_file(relative_path: str) -> None:
+    rel_path = Path(relative_path)
+    abs_path = (BASE_DIR / rel_path).resolve()
+    uploads_root = (BASE_DIR / "uploads").resolve()
+
+    if uploads_root not in abs_path.parents:
+        return
+
+    if abs_path.exists() and abs_path.is_file():
+        abs_path.unlink()
+
+
+def _store_uploaded_attachment(upload: UploadFile, entry_id: int, actor: str) -> None:
+    _validate_attachment_upload(upload)
+
+    now = datetime.now(timezone.utc)
+    relative_dir = Path("uploads") / now.strftime("%Y") / now.strftime("%m")
+    absolute_dir = BASE_DIR / relative_dir
+    absolute_dir.mkdir(parents=True, exist_ok=True)
+
+    original_filename = _sanitize_original_filename(upload.filename or "")
+    if not Path(original_filename).suffix:
+        raise HTTPException(
+            status_code=400,
+            detail="Attachment filename must include an extension",
+        )
+
+    stored_filename = _make_stored_filename(original_filename)
+    relative_path = relative_dir / stored_filename
+    disk_path = absolute_dir / stored_filename
+
+    bytes_written = 0
+    chunk_size = 1024 * 1024
+    try:
+        with disk_path.open("wb") as out:
+            while True:
+                chunk = upload.file.read(chunk_size)
+                if not chunk:
+                    break
+                bytes_written += len(chunk)
+                if bytes_written > MAX_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Attachment exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)} MB size limit",
+                    )
+                out.write(chunk)
+    except HTTPException:
+        if disk_path.exists():
+            disk_path.unlink()
+        raise
+    except Exception:
+        if disk_path.exists():
+            disk_path.unlink()
+        raise
+    finally:
+        upload.file.close()
+
+    create_attachment(
+        attachment_uid=_make_attachment_uid(),
+        entry_id=entry_id,
+        original_filename=original_filename,
+        stored_filename=stored_filename,
+        relative_path=str(relative_path).replace("\\", "/"),
+        mime_type=upload.content_type,
+        file_size=bytes_written,
+        created_by=actor,
+        created_at=_now_utc(),
+    )
+
+
+def _store_uploaded_attachments(attachments: list[UploadFile], entry_id: int, actor: str) -> None:
+    for upload in attachments:
+        _store_uploaded_attachment(upload, entry_id=entry_id, actor=actor)
 
 
 def _render_template(request: Request, template_name: str, context: dict | None = None):
@@ -356,6 +455,7 @@ def vendor_entry_new_form(request: Request, vendor_uid: str):
             "mode": "create",
             "vendor": vendor,
             "entry": None,
+            "entry_attachments": [],
             "form_action": f"/vendor/{vendor_uid}/entries",
             "submit_label": "Save Entry",
         },
@@ -435,6 +535,8 @@ def entry_edit_form(request: Request, entry_uid: str):
     if entry is None:
         raise HTTPException(status_code=404, detail="Entry not found")
 
+    entry_attachments = list_attachments_for_entry_id(entry["id"])
+
     vendor_context = {
         "vendor_uid": entry["vendor_uid"],
         "name": entry["vendor_name"],
@@ -447,6 +549,7 @@ def entry_edit_form(request: Request, entry_uid: str):
             "mode": "edit",
             "vendor": vendor_context,
             "entry": entry,
+            "entry_attachments": entry_attachments,
             "form_action": f"/entry/{entry_uid}/edit",
             "submit_label": "Save Entry Changes",
         },
@@ -460,11 +563,18 @@ def entry_edit_submit(
     body_text: str = Form(""),
     vendor_reference: str = Form(""),
     rep_name: str = Form(""),
+    remove_attachment_uids: list[str] | None = Form(None),
+    attachments: list[UploadFile] | None = File(None),
 ):
     actor = request.state.current_actor["actor_id"]
     entry = get_entry_by_uid(entry_uid)
     if entry is None:
         raise HTTPException(status_code=404, detail="Entry not found")
+
+    new_attachments = _get_submitted_attachments(attachments)
+    for upload in new_attachments:
+        _validate_attachment_upload(upload)
+
     update_entry_by_uid(
         entry_uid=entry_uid,
         body_text=body_text or None,
@@ -473,6 +583,14 @@ def entry_edit_submit(
         updated_at=_now_utc(),
         updated_by=actor,
     )
+
+    for attachment_uid in set(remove_attachment_uids or []):
+        deleted_attachment = delete_attachment_by_uid_for_entry(entry["id"], attachment_uid)
+        if deleted_attachment is not None:
+            _delete_attachment_file(deleted_attachment["relative_path"])
+
+    _store_uploaded_attachments(new_attachments, entry_id=entry["id"], actor=actor)
+
     return RedirectResponse(url=f"/vendor/{entry['vendor_uid']}", status_code=303)
 
 
@@ -483,7 +601,7 @@ def create_vendor_entry(
     body_text: str = Form(""),
     vendor_reference: str = Form(""),
     rep_name: str = Form(""),
-    attachment: UploadFile | None = File(None),
+    attachments: list[UploadFile] | None = File(None),
 ):
     actor = request.state.current_actor["actor_id"]
     vendor = get_vendor_by_uid(vendor_uid)
@@ -496,6 +614,10 @@ def create_vendor_entry(
             detail="Archived vendors cannot accept new entries. Unarchive vendor to continue.",
         )
 
+    new_attachments = _get_submitted_attachments(attachments)
+    for upload in new_attachments:
+        _validate_attachment_upload(upload)
+
     entry_id = create_entry(
         entry_uid=_make_entry_uid(),
         vendor_id=vendor["id"],
@@ -506,74 +628,8 @@ def create_vendor_entry(
         created_at=_now_utc(),
     )
 
-    if attachment and attachment.filename:
-        raw_name = Path(attachment.filename).name
-        if not Path(raw_name).suffix:
-            raise HTTPException(
-                status_code=400,
-                detail="Attachment filename must include an extension",
-            )
+    _store_uploaded_attachments(new_attachments, entry_id=entry_id, actor=actor)
 
-        declared_size = getattr(attachment, "size", None)
-        if declared_size is not None and declared_size > MAX_UPLOAD_BYTES:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Attachment exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)} MB size limit",
-            )
-
-        now = datetime.now(timezone.utc)
-        relative_dir = Path("uploads") / now.strftime("%Y") / now.strftime("%m")
-        absolute_dir = BASE_DIR / relative_dir
-        absolute_dir.mkdir(parents=True, exist_ok=True)
-
-        original_filename = _sanitize_original_filename(attachment.filename)
-        if not Path(original_filename).suffix:
-            raise HTTPException(
-                status_code=400,
-                detail="Attachment filename must include an extension",
-            )
-
-        stored_filename = _make_stored_filename(original_filename)
-        relative_path = relative_dir / stored_filename
-        disk_path = absolute_dir / stored_filename
-
-        bytes_written = 0
-        chunk_size = 1024 * 1024
-        try:
-            with disk_path.open("wb") as out:
-                while True:
-                    chunk = attachment.file.read(chunk_size)
-                    if not chunk:
-                        break
-                    bytes_written += len(chunk)
-                    if bytes_written > MAX_UPLOAD_BYTES:
-                        raise HTTPException(
-                            status_code=400,
-                            detail=f"Attachment exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)} MB size limit",
-                        )
-                    out.write(chunk)
-        except HTTPException:
-            if disk_path.exists():
-                disk_path.unlink()
-            raise
-        except Exception:
-            if disk_path.exists():
-                disk_path.unlink()
-            raise
-        finally:
-            attachment.file.close()
-
-        create_attachment(
-            attachment_uid=_make_attachment_uid(),
-            entry_id=entry_id,
-            original_filename=original_filename,
-            stored_filename=stored_filename,
-            relative_path=str(relative_path).replace("\\", "/"),
-            mime_type=attachment.content_type,
-            file_size=bytes_written,
-            created_by=actor,
-            created_at=_now_utc(),
-        )
     return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
 
 

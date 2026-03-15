@@ -2,7 +2,6 @@
     var form = document.getElementById("entry-form");
     var bodyText = document.getElementById("body_text");
     var fileInput = document.getElementById("attachment");
-    var attachTrigger = document.getElementById("attach-trigger");
     var attachmentName = document.getElementById("attachment-name");
     var calendarTrigger = document.getElementById("calendar-trigger");
     var calendarPanel = document.getElementById("calendar-panel");
@@ -101,7 +100,12 @@
         }
 
         if (fileInput.files && fileInput.files.length > 0) {
-            attachmentName.textContent = "Selected: " + fileInput.files[0].name;
+            if (fileInput.files.length === 1) {
+                attachmentName.textContent = "Selected: " + fileInput.files[0].name;
+                return;
+            }
+
+            attachmentName.textContent = "Selected " + fileInput.files.length + " files";
             return;
         }
 
@@ -120,10 +124,12 @@
             return true;
         }
 
-        var selectedName = fileInput.files[0].name;
-        if (!hasExtension(selectedName)) {
-            fileInput.setCustomValidity("Attached file must include an extension, such as .pdf or .jpg.");
-            return false;
+        for (var index = 0; index < fileInput.files.length; index += 1) {
+            var selectedName = fileInput.files[index].name;
+            if (!hasExtension(selectedName)) {
+                fileInput.setCustomValidity("Attached files must include an extension, such as .pdf or .jpg.");
+                return false;
+            }
         }
 
         fileInput.setCustomValidity("");
@@ -135,12 +141,6 @@
         setAttachmentName();
         fileInput.reportValidity();
     });
-
-    if (attachTrigger) {
-        attachTrigger.addEventListener("click", function () {
-            fileInput.click();
-        });
-    }
 
     if (calendarTrigger && calendarPanel) {
         calendarTrigger.addEventListener("click", function () {

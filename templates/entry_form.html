@@ -19,7 +19,7 @@
 </p>
 
 <section class="content-section entry-edit-section">
-    <form id="entry-form" method="post" action="{{ form_action }}"{% if mode == "create" %} enctype="multipart/form-data"{% endif %}>
+    <form id="entry-form" method="post" action="{{ form_action }}" enctype="multipart/form-data">
         <div class="form-field">
             <label for="body_text">Entry</label>
             <textarea id="body_text" name="body_text" rows="8">{% if entry %}{{ entry.body_text or '' }}{% endif %}</textarea>
@@ -33,20 +33,42 @@
             <input type="text" id="rep_name" name="rep_name" value="{% if entry %}{{ entry.rep_name or '' }}{% endif %}">
         </div>
 
-        {% if mode == "create" %}
+        {% if mode == "edit" %}
+        <div class="form-field existing-attachments-field">
+            <label>Existing Attachments</label>
+            {% if entry_attachments %}
+            <ul class="attachment-list">
+                {% for attachment in entry_attachments %}
+                <li>
+                    <label>
+                        <input type="checkbox" name="remove_attachment_uids" value="{{ attachment.attachment_uid }}">
+                        Remove
+                    </label>
+                    <a href="/attachments/{{ attachment.attachment_uid }}">{{ attachment.original_filename }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>No attachments on this entry yet.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
         <div class="form-field attachment-field">
-            <label for="attachment">Attach Document (optional)</label>
-            <input type="file" id="attachment" name="attachment">
+            <label for="attachment">{% if mode == "edit" %}Add Attachments (optional){% else %}Attach Documents (optional){% endif %}</label>
+            <input type="file" id="attachment" name="attachments" multiple>
             <p id="attachment-name" class="attachment-name">No file selected</p>
         </div>
 
         <div class="entry-actions">
             <button type="submit" class="btn btn-primary">{{ submit_label }}</button>
-            <button type="button" id="attach-trigger" class="btn btn-secondary">Attach Document</button>
+            {% if mode == "create" %}
             <button type="button" id="calendar-trigger" class="btn btn-secondary">Add Calendar Event</button>
+            {% endif %}
             <a href="/vendor/{{ vendor.vendor_uid }}" class="btn btn-secondary">Cancel</a>
         </div>
 
+        {% if mode == "create" %}
         <section id="calendar-panel" class="calendar-panel" hidden>
             <h3>Calendar Event</h3>
             <div class="form-field">
@@ -72,16 +94,9 @@
                 <button type="button" id="calendar-cancel" class="btn btn-secondary">Cancel</button>
             </div>
         </section>
-        {% else %}
-        <div class="entry-actions">
-            <button type="submit" class="btn btn-primary">{{ submit_label }}</button>
-            <a href="/vendor/{{ vendor.vendor_uid }}" class="btn btn-secondary">Cancel</a>
-        </div>
         {% endif %}
     </form>
 </section>
 
-{% if mode == "create" %}
 <script src="/static/js/vendor_detail.js"></script>
-{% endif %}
 {% endblock %}
