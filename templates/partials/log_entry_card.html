@@ -1,4 +1,4 @@
-<article class="timeline-entry timeline-entry-{{ log_mode }}">
+<article class="timeline-entry timeline-entry-{{ log_mode }}{% if is_current_entry is defined and is_current_entry %} is-current-entry{% endif %}">
     {% if log_entry.title %}
     <h3 class="entry-title">{{ log_entry.title }}</h3>
     {% endif %}
@@ -42,7 +42,9 @@
     <p class="entry-meta"><strong>Attachments:</strong> {{ log_entry_attachments|length }}</p>
     {% endif %}
 
-    <p>
-        <small><a href="/entry/{{ log_entry.entry_uid }}/edit">Edit Entry</a></small>
-    </p>
+    {% if is_current_entry is defined and is_current_entry %}
+    <p><small><span class="current-entry-badge">Editing</span></small></p>
+    {% else %}
+    <p><small><a href="/entry/{{ log_entry.entry_uid }}/edit">Edit Entry</a></small></p>
+    {% endif %}
 </article>

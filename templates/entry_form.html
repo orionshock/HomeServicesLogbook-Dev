@@ -121,6 +121,7 @@
                 {% set log_entry = history_entry %}
                 {% set log_mode = "compact" %}
                 {% set log_entry_attachments = attachments_by_entry.get(history_entry.id, []) %}
+                {% set is_current_entry = (current_entry_uid is defined) and (history_entry.entry_uid == current_entry_uid) %}
                 {% include "partials/log_entry_card.html" %}
                 {% endfor %}
             </div>

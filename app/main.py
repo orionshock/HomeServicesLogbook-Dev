@@ -630,7 +630,7 @@ def entry_edit_form(request: Request, entry_uid: str):
     for item in list_attachments_for_entry_ids([e["id"] for e in entries]):
         attachments_by_entry.setdefault(item["entry_id"], []).append(item)
 
-    entry_crumb_label = entry["title"] if entry.get("title") else entry_uid
+    entry_crumb_label = entry["title"] if entry["title"] else entry_uid
     return _render_template(
         request,
         "entry_form.html",
@@ -647,6 +647,7 @@ def entry_edit_form(request: Request, entry_uid: str):
             "entry_attachments": entry_attachments,
             "entries": entries,
             "attachments_by_entry": attachments_by_entry,
+            "current_entry_uid": entry_uid,
             "form_action": f"/entry/{entry_uid}/edit",
             "submit_label": "Save Entry Changes",
         },
@@ -717,6 +718,10 @@ def create_vendor_entry(
     new_attachments = _get_submitted_attachments(attachments)
     for upload in new_attachments:
         _validate_attachment_upload(upload)
+
+    # Skip record creation if every field is blank and no files were attached.
+    if not any([body_text.strip(), title.strip(), interaction_at.strip(), rep_name.strip(), new_attachments]):
+        return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
 
     entry_id = create_entry(
         entry_uid=make_uid("entry"),

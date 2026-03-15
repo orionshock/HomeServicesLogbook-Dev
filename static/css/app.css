@@ -480,6 +480,16 @@ h2 {
     background: #fff;
 }
 
+.is-current-entry {
+    border-color: var(--accent, #4a90d9);
+    background: #f0f6ff;
+}
+
+.current-entry-badge {
+    color: var(--accent, #4a90d9);
+    font-style: italic;
+}
+
 .timeline-entry p {
     margin: 0 0 8px;
 }
