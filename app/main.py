@@ -11,7 +11,21 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.db import get_connection, init_db
+from app.db import (
+    archive_vendor_by_uid,
+    create_attachment,
+    create_entry,
+    create_vendor,
+    get_attachment_by_uid,
+    get_entry_by_uid,
+    get_vendor_by_uid,
+    init_db,
+    list_attachments_for_entry_ids,
+    list_entries_for_vendor,
+    list_vendors,
+    update_entry_by_uid,
+    update_vendor_by_uid,
+)
 
 
 def _make_vendor_uid(name: str) -> str:
@@ -233,40 +247,23 @@ def vendor_new_submit(
     clean_name = _normalize_required_text(name, "Vendor name")
     vendor_uid = _make_vendor_uid(clean_name)
     now = _now_utc()
-    with get_connection() as conn:
-        conn.execute(
-            """
-            INSERT INTO vendors (vendor_uid, name, category, account_number, portal_url, vendor_notes, created_at, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                vendor_uid,
-                clean_name,
-                category or None,
-                account_number or None,
-                portal_url or None,
-                vendor_notes or None,
-                now,
-                actor,
-            ),
-        )
+    create_vendor(
+        vendor_uid=vendor_uid,
+        name=clean_name,
+        category=category or None,
+        account_number=account_number or None,
+        portal_url=portal_url or None,
+        vendor_notes=vendor_notes or None,
+        created_at=now,
+        created_by=actor,
+    )
     return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
 
 
 @app.get("/vendors")
 def vendor_list(request: Request, show_archived: int = 0):
     include_archived = show_archived == 1
-
-    with get_connection() as conn:
-        if include_archived:
-            vendors = conn.execute(
-                "SELECT * FROM vendors ORDER BY archived_at IS NOT NULL, name"
-            ).fetchall()
-        else:
-            vendors = conn.execute(
-                "SELECT * FROM vendors WHERE archived_at IS NULL ORDER BY name"
-            ).fetchall()
-
+    vendors = list_vendors(include_archived)
     return _render_template(
         request,
         "vendors.html",
@@ -277,74 +274,23 @@ def vendor_list(request: Request, show_archived: int = 0):
 @app.post("/vendor/{vendor_uid}/archive")
 def vendor_archive(request: Request, vendor_uid: str):
     actor = request.state.current_actor["actor_id"]
-
-    with get_connection() as conn:
-        exists = conn.execute(
-            "SELECT id FROM vendors WHERE vendor_uid = ?",
-            (vendor_uid,),
-        ).fetchone()
-
-        if exists is None:
-            raise HTTPException(status_code=404, detail="Vendor not found")
-
-        now = _now_utc()
-        conn.execute(
-            """
-            UPDATE vendors
-            SET
-                archived_at = ?,
-                updated_at = ?,
-                updated_by = ?
-            WHERE vendor_uid = ?
-            """,
-            (
-                now,
-                now,
-                actor,
-                vendor_uid,
-            ),
-        )
-
+    now = _now_utc()
+    found = archive_vendor_by_uid(vendor_uid, archived_at=now, updated_by=actor)
+    if not found:
+        raise HTTPException(status_code=404, detail="Vendor not found")
     return RedirectResponse(url="/vendors", status_code=303)
 
 
 @app.get("/vendor/{vendor_uid}")
 def vendor_detail(request: Request, vendor_uid: str):
-    with get_connection() as conn:
-        vendor = conn.execute(
-            "SELECT * FROM vendors WHERE vendor_uid = ?",
-            (vendor_uid,),
-        ).fetchone()
-
-        entries = conn.execute(
-            """
-            SELECT *
-            FROM entries
-            WHERE vendor_id = ?
-              AND archived_at IS NULL
-            ORDER BY created_at DESC, id DESC
-            """,
-            (vendor["id"],),
-        ).fetchall() if vendor else []
-
-        attachments_by_entry: dict[int, list] = {}
-        if entries:
-            entry_ids = [entry["id"] for entry in entries]
-            placeholders = ",".join("?" for _ in entry_ids)
-            attachments = conn.execute(
-                f"""
-                SELECT attachment_uid, entry_id, original_filename
-                FROM attachments
-                WHERE entry_id IN ({placeholders})
-                ORDER BY id ASC
-                """,
-                tuple(entry_ids),
-            ).fetchall()
-            for item in attachments:
-                attachments_by_entry.setdefault(item["entry_id"], []).append(item)
-
+    vendor = get_vendor_by_uid(vendor_uid)
     if vendor is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
+
+    entries = list_entries_for_vendor(vendor["id"])
+    attachments_by_entry: dict[int, list] = {}
+    for item in list_attachments_for_entry_ids([e["id"] for e in entries]):
+        attachments_by_entry.setdefault(item["entry_id"], []).append(item)
 
     return _render_template(
         request,
@@ -359,12 +305,7 @@ def vendor_detail(request: Request, vendor_uid: str):
 
 @app.get("/vendor/{vendor_uid}/edit")
 def vendor_edit_form(request: Request, vendor_uid: str):
-    with get_connection() as conn:
-        vendor = conn.execute(
-            "SELECT * FROM vendors WHERE vendor_uid = ?",
-            (vendor_uid,),
-        ).fetchone()
-
+    vendor = get_vendor_by_uid(vendor_uid)
     if vendor is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
 
@@ -388,66 +329,29 @@ def vendor_edit_submit(
 ):
     actor = request.state.current_actor["actor_id"]
     clean_name = _normalize_required_text(name, "Vendor name")
-
-    with get_connection() as conn:
-        exists = conn.execute(
-            "SELECT id FROM vendors WHERE vendor_uid = ?",
-            (vendor_uid,),
-        ).fetchone()
-
-        if exists is None:
-            raise HTTPException(status_code=404, detail="Vendor not found")
-
-        conn.execute(
-            """
-            UPDATE vendors
-            SET
-                name = ?,
-                category = ?,
-                account_number = ?,
-                name_on_account = ?,
-                portal_url = ?,
-                portal_username = ?,
-                phone_on_file = ?,
-                security_pin = ?,
-                service_location = ?,
-                vendor_notes = ?,
-                updated_at = ?,
-                updated_by = ?
-            WHERE vendor_uid = ?
-            """,
-            (
-                clean_name,
-                category or None,
-                account_number or None,
-                name_on_account or None,
-                portal_url or None,
-                portal_username or None,
-                phone_on_file or None,
-                security_pin or None,
-                service_location or None,
-                vendor_notes or None,
-                _now_utc(),
-                actor,
-                vendor_uid,
-            ),
-        )
-
+    if get_vendor_by_uid(vendor_uid) is None:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    update_vendor_by_uid(
+        vendor_uid=vendor_uid,
+        name=clean_name,
+        category=category or None,
+        account_number=account_number or None,
+        name_on_account=name_on_account or None,
+        portal_url=portal_url or None,
+        portal_username=portal_username or None,
+        phone_on_file=phone_on_file or None,
+        security_pin=security_pin or None,
+        service_location=service_location or None,
+        vendor_notes=vendor_notes or None,
+        updated_at=_now_utc(),
+        updated_by=actor,
+    )
     return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
 
 
 @app.get("/attachments/{attachment_uid}")
 def attachment_download(attachment_uid: str):
-    with get_connection() as conn:
-        attachment = conn.execute(
-            """
-            SELECT attachment_uid, original_filename, relative_path, mime_type
-            FROM attachments
-            WHERE attachment_uid = ?
-            """,
-            (attachment_uid,),
-        ).fetchone()
-
+    attachment = get_attachment_by_uid(attachment_uid)
     if attachment is None:
         raise HTTPException(status_code=404, detail="Attachment not found")
 
@@ -467,17 +371,7 @@ def attachment_download(attachment_uid: str):
 
 @app.get("/entry/{entry_uid}/edit")
 def entry_edit_form(request: Request, entry_uid: str):
-    with get_connection() as conn:
-        entry = conn.execute(
-            """
-            SELECT e.*, v.vendor_uid, v.name AS vendor_name
-            FROM entries e
-            JOIN vendors v ON v.id = e.vendor_id
-            WHERE e.entry_uid = ?
-            """,
-            (entry_uid,),
-        ).fetchone()
-
+    entry = get_entry_by_uid(entry_uid)
     if entry is None:
         raise HTTPException(status_code=404, detail="Entry not found")
 
@@ -493,42 +387,17 @@ def entry_edit_submit(
     rep_name: str = Form(""),
 ):
     actor = request.state.current_actor["actor_id"]
-
-    with get_connection() as conn:
-        entry = conn.execute(
-            """
-            SELECT e.id, v.vendor_uid
-            FROM entries e
-            JOIN vendors v ON v.id = e.vendor_id
-            WHERE e.entry_uid = ?
-            """,
-            (entry_uid,),
-        ).fetchone()
-
-        if entry is None:
-            raise HTTPException(status_code=404, detail="Entry not found")
-
-        conn.execute(
-            """
-            UPDATE entries
-            SET
-                body_text = ?,
-                vendor_reference = ?,
-                rep_name = ?,
-                updated_at = ?,
-                updated_by = ?
-            WHERE entry_uid = ?
-            """,
-            (
-                body_text or None,
-                vendor_reference or None,
-                rep_name or None,
-                _now_utc(),
-                actor,
-                entry_uid,
-            ),
-        )
-
+    entry = get_entry_by_uid(entry_uid)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    update_entry_by_uid(
+        entry_uid=entry_uid,
+        body_text=body_text or None,
+        vendor_reference=vendor_reference or None,
+        rep_name=rep_name or None,
+        updated_at=_now_utc(),
+        updated_by=actor,
+    )
     return RedirectResponse(url=f"/vendor/{entry['vendor_uid']}", status_code=303)
 
 
@@ -542,101 +411,63 @@ def create_vendor_entry(
     attachment: UploadFile | None = File(None),
 ):
     actor = request.state.current_actor["actor_id"]
-    with get_connection() as conn:
-        vendor = conn.execute(
-            "SELECT id FROM vendors WHERE vendor_uid = ?",
-            (vendor_uid,),
-        ).fetchone()
+    vendor = get_vendor_by_uid(vendor_uid)
+    if vendor is None:
+        raise HTTPException(status_code=404, detail="Vendor not found")
 
-        if vendor is None:
-            raise HTTPException(status_code=404, detail="Vendor not found")
+    entry_id = create_entry(
+        entry_uid=_make_entry_uid(),
+        vendor_id=vendor["id"],
+        body_text=body_text or None,
+        vendor_reference=vendor_reference or None,
+        rep_name=rep_name or None,
+        created_by=actor,
+        created_at=_now_utc(),
+    )
 
-        cursor = conn.execute(
-            """
-            INSERT INTO entries (
-                entry_uid,
-                vendor_id,
-                body_text,
-                vendor_reference,
-                rep_name,
-                created_by,
-                created_at
+    if attachment and attachment.filename:
+        raw_name = Path(attachment.filename).name
+        if not Path(raw_name).suffix:
+            raise HTTPException(
+                status_code=400,
+                detail="Attachment filename must include an extension",
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                _make_entry_uid(),
-                vendor["id"],
-                body_text or None,
-                vendor_reference or None,
-                rep_name or None,
-                actor,
-                _now_utc(),
-            ),
+
+        now = datetime.now(timezone.utc)
+        subdir = Path("uploads") / now.strftime("%Y") / now.strftime("%m")
+        subdir.mkdir(parents=True, exist_ok=True)
+
+        original_filename = _sanitize_original_filename(attachment.filename)
+        if not Path(original_filename).suffix:
+            raise HTTPException(
+                status_code=400,
+                detail="Attachment filename must include an extension",
+            )
+
+        stored_filename = _make_stored_filename(original_filename)
+        disk_path = subdir / stored_filename
+        file_bytes = attachment.file.read()
+
+        if len(file_bytes) > MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Attachment exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)} MB size limit",
+            )
+
+        with disk_path.open("wb") as out:
+            out.write(file_bytes)
+
+        create_attachment(
+            attachment_uid=_make_attachment_uid(),
+            entry_id=entry_id,
+            original_filename=original_filename,
+            stored_filename=stored_filename,
+            relative_path=str(disk_path).replace("\\", "/"),
+            mime_type=attachment.content_type,
+            file_size=len(file_bytes),
+            created_by=actor,
+            created_at=_now_utc(),
         )
-
-        entry_id = cursor.lastrowid
-
-        if attachment and attachment.filename:
-            raw_name = Path(attachment.filename).name
-            if not Path(raw_name).suffix:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Attachment filename must include an extension",
-                )
-
-            now = datetime.now(timezone.utc)
-            subdir = Path("uploads") / now.strftime("%Y") / now.strftime("%m")
-            subdir.mkdir(parents=True, exist_ok=True)
-
-            original_filename = _sanitize_original_filename(attachment.filename)
-            if not Path(original_filename).suffix:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Attachment filename must include an extension",
-                )
-
-            stored_filename = _make_stored_filename(original_filename)
-            disk_path = subdir / stored_filename
-            file_bytes = attachment.file.read()
-
-            if len(file_bytes) > MAX_UPLOAD_BYTES:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Attachment exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)} MB size limit",
-                )
-
-            with disk_path.open("wb") as out:
-                out.write(file_bytes)
-
-            conn.execute(
-                """
-                INSERT INTO attachments (
-                    attachment_uid,
-                    entry_id,
-                    original_filename,
-                    stored_filename,
-                    relative_path,
-                    mime_type,
-                    file_size,
-                    created_by,
-                    created_at
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    _make_attachment_uid(),
-                    entry_id,
-                    original_filename,
-                    stored_filename,
-                    str(disk_path).replace("\\", "/"),
-                    attachment.content_type,
-                    len(file_bytes),
-                    actor,
-                    _now_utc(),
-                ),
-            )
-
     return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
 
 
