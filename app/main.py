@@ -630,6 +630,7 @@ def entry_edit_form(request: Request, entry_uid: str):
     for item in list_attachments_for_entry_ids([e["id"] for e in entries]):
         attachments_by_entry.setdefault(item["entry_id"], []).append(item)
 
+    entry_crumb_label = entry["title"] if entry.get("title") else entry_uid
     return _render_template(
         request,
         "entry_form.html",
@@ -638,7 +639,7 @@ def entry_edit_form(request: Request, entry_uid: str):
                 {"label": "Home", "url": "/"},
                 {"label": "Vendors", "url": "/vendors"},
                 {"label": vendor["name"], "url": f"/vendor/{vendor['vendor_uid']}"},
-                {"label": f"Edit Entry - {entry_uid}", "url": None},
+                {"label": f"Edit Entry - {entry_crumb_label}", "url": None},
             ],
             "mode": "edit",
             "vendor": vendor,

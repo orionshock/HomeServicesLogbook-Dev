@@ -1,16 +1,10 @@
 # Home Services Logbook TODO
 
 ## Global UX
-- [ ] Render all timestamps in the local browser timezone.
 - [ ] Warn before navigating away when there are unsaved edits in vendor details or entries.
 - [ ] Improve form validation feedback (clear errors, inline guidance, and recovery hints).
 
 ## Entries
-### Vendor Reference Naming
-- [ ] Rename "Vendor Ref" to "Title" while keeping the same underlying meaning.
-- [ ] In breadcrumbs, use entry title when present; otherwise fall back to URL slug.
-- [ ] Add user-facing hints that explain this title/slug fallback behavior.
-
 ### Log History Behavior
 - [ ] While editing an entry, hide that same entry from the history list.
 - [ ] Update each history card to use title as the primary line and created timestamp as subtitle.
