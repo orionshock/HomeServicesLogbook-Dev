@@ -30,22 +30,7 @@ from app.db import (
     update_entry_by_uid,
     update_vendor_by_uid,
 )
-
-
-def _make_vendor_uid(name: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:30]
-    short = uuid.uuid4().hex[:4]
-    return f"{slug}-{short}"
-
-
-def _make_entry_uid() -> str:
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    short = uuid.uuid4().hex[:6]
-    return f"{stamp}-{short}"
-
-
-def _make_attachment_uid() -> str:
-    return uuid.uuid4().hex
+from app.utils import make_uid, utc_now_iso
 
 
 def _resolve_current_actor(_request: Request) -> dict[str, str]:
@@ -55,10 +40,6 @@ def _resolve_current_actor(_request: Request) -> dict[str, str]:
         "display_name": "devUser",
         "source": "hardcoded",
     }
-
-
-def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _normalize_interaction_at_utc(interaction_at_utc: str) -> str | None:
@@ -170,7 +151,7 @@ MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 
 def _normalize_required_text(value: str, field_name: str) -> str:
-    normalized = (value or "").strip()
+    normalized = re.sub(r"\s+", " ", (value or "").strip())
     if not normalized:
         raise HTTPException(status_code=400, detail=f"{field_name} is required")
     return normalized
@@ -281,7 +262,7 @@ def _store_uploaded_attachment(upload: UploadFile, entry_id: int, actor: str) ->
         upload.file.close()
 
     create_attachment(
-        attachment_uid=_make_attachment_uid(),
+        attachment_uid=make_uid("attachment"),
         entry_id=entry_id,
         original_filename=original_filename,
         stored_filename=stored_filename,
@@ -414,7 +395,7 @@ def vendor_new_submit(
     actor = request.state.current_actor["actor_id"]
     clean_name = _normalize_required_text(name, "Vendor name")
     clean_portal_url = _normalize_portal_url(portal_url)
-    vendor_uid = _make_vendor_uid(clean_name)
+    vendor_uid = make_uid("vendor", name=clean_name)
     now = utc_now_iso()
     create_vendor(
         vendor_uid=vendor_uid,
@@ -741,7 +722,7 @@ def create_vendor_entry(
         _validate_attachment_upload(upload)
 
     entry_id = create_entry(
-        entry_uid=_make_entry_uid(),
+        entry_uid=make_uid("entry"),
         vendor_id=vendor["id"],
         title=title or None,
         interaction_at=_normalize_interaction_at_utc(interaction_at),
