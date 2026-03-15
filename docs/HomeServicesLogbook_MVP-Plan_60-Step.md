@@ -385,7 +385,7 @@ Commit vendor editing.
 Add an archive action for vendors.
 
 ### Step 96
-Implement archive by setting `archived_at` instead of deleting.
+Implement archive by setting `archived_at`; archive is the preferred lifecycle action over delete in normal use.
 
 ### Step 97
 Hide archived vendors from the default `/vendors` list.
@@ -413,7 +413,7 @@ Create GET route for editing a specific entry.
 Create `templates/entry_edit.html` or a simple edit form.
 
 ### Step 104
-Allow body text, vendor reference, and rep name to be edited.
+Allow all fields except for the vendor relationship to be edited.
 
 ### Step 105
 Update `updated_at` and `updated_by` if used.

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Entry — Home Services Logbook{% endblock %}
+
+{% block content %}
+<h1>Edit Entry</h1>
+
+<p>
+    Vendor: <a href="/vendor/{{ entry.vendor_uid }}">{{ entry.vendor_name }}</a>
+</p>
+<p>
+    <a href="/vendor/{{ entry.vendor_uid }}">Back to Vendor</a>
+</p>
+
+<section class="content-section entry-edit-section">
+    <form method="post" action="/entry/{{ entry.entry_uid }}/edit">
+        <div>
+            <label for="body_text">Entry</label><br>
+            <textarea id="body_text" name="body_text" rows="8" cols="70">{{ entry.body_text or '' }}</textarea>
+        </div>
+        <div>
+            <label for="vendor_reference">Vendor Reference</label><br>
+            <input type="text" id="vendor_reference" name="vendor_reference" value="{{ entry.vendor_reference or '' }}">
+        </div>
+        <div>
+            <label for="rep_name">Rep Name</label><br>
+            <input type="text" id="rep_name" name="rep_name" value="{{ entry.rep_name or '' }}">
+        </div>
+        <div>
+            <button type="submit">Save Entry Changes</button>
+            <a href="/vendor/{{ entry.vendor_uid }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

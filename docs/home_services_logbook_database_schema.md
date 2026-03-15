@@ -137,7 +137,7 @@ Example:
 archived_at\
 Non-null value indicates vendor is archived.
 
-Vendors should generally be archived instead of deleted.
+Archiving is the preferred user-facing lifecycle action; deletion should be avoided in normal use.
 
 ------------------------------------------------------------------------
 

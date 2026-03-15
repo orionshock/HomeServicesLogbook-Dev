@@ -338,6 +338,73 @@ def attachment_download(attachment_uid: str):
     )
 
 
+@app.get("/entry/{entry_uid}/edit")
+def entry_edit_form(request: Request, entry_uid: str):
+    with get_connection() as conn:
+        entry = conn.execute(
+            """
+            SELECT e.*, v.vendor_uid, v.name AS vendor_name
+            FROM entries e
+            JOIN vendors v ON v.id = e.vendor_id
+            WHERE e.entry_uid = ?
+            """,
+            (entry_uid,),
+        ).fetchone()
+
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Entry not found")
+
+    return _render_template(request, "entry_edit.html", {"entry": entry})
+
+
+@app.post("/entry/{entry_uid}/edit")
+def entry_edit_submit(
+    request: Request,
+    entry_uid: str,
+    body_text: str = Form(""),
+    vendor_reference: str = Form(""),
+    rep_name: str = Form(""),
+):
+    actor = request.state.current_actor["actor_id"]
+
+    with get_connection() as conn:
+        entry = conn.execute(
+            """
+            SELECT e.id, v.vendor_uid
+            FROM entries e
+            JOIN vendors v ON v.id = e.vendor_id
+            WHERE e.entry_uid = ?
+            """,
+            (entry_uid,),
+        ).fetchone()
+
+        if entry is None:
+            raise HTTPException(status_code=404, detail="Entry not found")
+
+        conn.execute(
+            """
+            UPDATE entries
+            SET
+                body_text = ?,
+                vendor_reference = ?,
+                rep_name = ?,
+                updated_at = ?,
+                updated_by = ?
+            WHERE entry_uid = ?
+            """,
+            (
+                body_text or None,
+                vendor_reference or None,
+                rep_name or None,
+                _now_utc(),
+                actor,
+                entry_uid,
+            ),
+        )
+
+    return RedirectResponse(url=f"/vendor/{entry['vendor_uid']}", status_code=303)
+
+
 @app.post("/vendor/{vendor_uid}/entries")
 def create_vendor_entry(
     request: Request,

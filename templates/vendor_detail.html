@@ -90,6 +90,9 @@
     {% for entry in entries %}
     <article class="timeline-entry">
         <p><strong>Created:</strong> {{ entry.created_at }}</p>
+        {% if entry.updated_at %}
+        <p><strong>Edited:</strong> {{ entry.updated_at }}</p>
+        {% endif %}
 
         {% if entry.body_text %}
         <p>{{ entry.body_text }}</p>
@@ -102,6 +105,10 @@
         {% if entry.rep_name %}
         <p><strong>Rep Name:</strong> {{ entry.rep_name }}</p>
         {% endif %}
+
+        <p>
+            <small><a href="/entry/{{ entry.entry_uid }}/edit">Edit Entry</a></small>
+        </p>
 
         {% set entry_attachments = attachments_by_entry.get(entry.id, []) %}
         {% if entry_attachments %}
