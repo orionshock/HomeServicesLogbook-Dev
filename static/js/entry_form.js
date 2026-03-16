@@ -13,9 +13,12 @@
     var calendarCancel = document.getElementById("calendar-cancel");
     var interactionAtLocalInput = document.getElementById("interaction_at_local");
     var interactionAtUtcInput = document.getElementById("interaction_at");
+    var entryFormLayout = document.querySelector(".entry-form-layout");
     var entryFormPrimary = document.querySelector(".entry-form-primary");
     var entryHistorySidebar = document.querySelector(".entry-history-sidebar");
     var entryHistoryList = document.querySelector(".entry-history-sidebar .entry-history-list");
+    var entryLayoutResizer = document.getElementById("entry-layout-resizer");
+    var entryLayoutStorageKeyPct = "hsl.entryLayout.sidebarWidthPct";
     if (!form || !fileInput) {
         return;
     }
@@ -48,6 +51,104 @@
                 entryHistoryList.style.overflowY = "auto";
             }
         }
+    }
+
+    function initLayoutResizer() {
+        if (!entryFormLayout || !entryHistorySidebar || !entryLayoutResizer || window.matchMedia("(max-width: 900px)").matches) {
+            return;
+        }
+
+        var isDragging = false;
+        var startX = 0;
+        var startSidebarWidth = 0;
+
+        function clampSidebarWidth(width) {
+            var layoutWidth = entryFormLayout.clientWidth;
+            var minSidebar = 220;
+            var minPrimary = 360;
+            var maxSidebar = Math.max(minSidebar, layoutWidth - minPrimary);
+            return Math.min(Math.max(width, minSidebar), maxSidebar);
+        }
+
+        function widthPxToPct(widthPx) {
+            var layoutWidth = entryFormLayout.clientWidth;
+            if (!layoutWidth) {
+                return 30;
+            }
+            return (widthPx / layoutWidth) * 100;
+        }
+
+        function applySidebarWidth(widthPx) {
+            var clampedWidth = clampSidebarWidth(widthPx);
+            var percentWidth = widthPxToPct(clampedWidth);
+            entryFormLayout.style.setProperty("--entry-sidebar-width", percentWidth.toFixed(2) + "%");
+            return clampedWidth;
+        }
+
+        function saveSidebarWidth(width) {
+            try {
+                window.localStorage.setItem(entryLayoutStorageKeyPct, widthPxToPct(width).toFixed(2));
+            } catch (_err) {
+                // Ignore storage errors (private mode / disabled storage).
+            }
+        }
+
+        function loadSavedSidebarWidth() {
+            try {
+                var rawPct = window.localStorage.getItem(entryLayoutStorageKeyPct);
+                if (rawPct) {
+                    var parsedPct = Number(rawPct);
+                    if (Number.isFinite(parsedPct) && parsedPct > 0) {
+                        return (entryFormLayout.clientWidth * parsedPct) / 100;
+                    }
+                }
+            } catch (_err) {
+                // Ignore storage access errors.
+            }
+
+            return null;
+        }
+
+        var savedSidebarWidth = loadSavedSidebarWidth();
+        if (savedSidebarWidth !== null) {
+            applySidebarWidth(savedSidebarWidth);
+        }
+
+        function onPointerMove(event) {
+            if (!isDragging) {
+                return;
+            }
+
+            var deltaX = event.clientX - startX;
+            var nextSidebarWidth = clampSidebarWidth(startSidebarWidth - deltaX);
+            applySidebarWidth(nextSidebarWidth);
+            syncHistorySidebarHeight();
+        }
+
+        function onPointerUp() {
+            if (!isDragging) {
+                return;
+            }
+
+            isDragging = false;
+            entryLayoutResizer.classList.remove("is-dragging");
+            document.body.style.cursor = "";
+            document.body.style.userSelect = "";
+            saveSidebarWidth(entryHistorySidebar.getBoundingClientRect().width);
+            window.removeEventListener("pointermove", onPointerMove);
+            window.removeEventListener("pointerup", onPointerUp);
+        }
+
+        entryLayoutResizer.addEventListener("pointerdown", function (event) {
+            isDragging = true;
+            startX = event.clientX;
+            startSidebarWidth = entryHistorySidebar.getBoundingClientRect().width;
+            entryLayoutResizer.classList.add("is-dragging");
+            document.body.style.cursor = "col-resize";
+            document.body.style.userSelect = "none";
+            window.addEventListener("pointermove", onPointerMove);
+            window.addEventListener("pointerup", onPointerUp);
+        });
     }
 
     function todayIsoDate() {
@@ -282,6 +383,7 @@
 
     setAttachmentName();
     setInteractionDefaults();
+    initLayoutResizer();
     syncHistorySidebarHeight();
 
     if (window.ResizeObserver && entryFormPrimary) {
