@@ -1,6 +1,6 @@
 (function () {
     var form = document.getElementById("entry-form");
-    var bodyText = document.getElementById("body_text");
+    var bodyText = document.getElementById("entry_body_text");
     var fileInput = document.getElementById("attachment");
     var attachmentName = document.getElementById("attachment-name");
     var calendarTrigger = document.getElementById("calendar-trigger");
@@ -11,8 +11,8 @@
     var calendarDescription = document.getElementById("calendar_description");
     var calendarDownload = document.getElementById("calendar-download");
     var calendarCancel = document.getElementById("calendar-cancel");
-    var interactionAtLocalInput = document.getElementById("interaction_at_local");
-    var interactionAtUtcInput = document.getElementById("interaction_at");
+    var interactionAtLocalInput = document.getElementById("entry_interaction_at_local");
+    var interactionAtUtcInput = document.getElementById("entry_interaction_at");
     var entryFormLayout = document.querySelector(".entry-form-layout");
     var entryFormPrimary = document.querySelector(".entry-form-primary");
     var entryHistorySidebar = document.querySelector(".entry-history-sidebar");

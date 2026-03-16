@@ -1,25 +1,25 @@
 <article class="timeline-entry timeline-entry-{{ log_mode }}{% if is_current_entry is defined and is_current_entry %} is-current-entry{% endif %}">
     <div class="entry-heading">
-        <h3 class="entry-title">{{ log_entry.title or "Untitled Entry" }}</h3>
-        {% if log_entry.interaction_at %}
-        <p class="entry-subtitle">Interaction: <time class="js-local-time" datetime="{{ log_entry.interaction_at }}">{{ log_entry.interaction_at }}</time></p>
+        <h3 class="entry-title">{{ log_entry.entry_title or "Untitled Entry" }}</h3>
+        {% if log_entry.entry_interaction_at %}
+        <p class="entry-subtitle">Interaction: <time class="js-local-time" datetime="{{ log_entry.entry_interaction_at }}">{{ log_entry.entry_interaction_at }}</time></p>
         {% else %}
-        <p class="entry-subtitle">Logged: <time class="js-local-time" datetime="{{ log_entry.created_at }}">{{ log_entry.created_at }}</time></p>
+        <p class="entry-subtitle">Logged: <time class="js-local-time" datetime="{{ log_entry.entry_created_at }}">{{ log_entry.entry_created_at }}</time></p>
         {% endif %}
-        {% if log_entry.rep_name %}
-        <p class="entry-subtitle">Rep: {{ log_entry.rep_name }}</p>
+        {% if log_entry.entry_rep_name %}
+        <p class="entry-subtitle">Rep: {{ log_entry.entry_rep_name }}</p>
         {% endif %}
     </div>
 
-    {% if log_mode == "full" and log_entry.updated_at %}
-    <p class="entry-meta"><strong>Edited:</strong> <time class="js-local-time" datetime="{{ log_entry.updated_at }}">{{ log_entry.updated_at }}</time></p>
+    {% if log_mode == "full" and log_entry.entry_updated_at %}
+    <p class="entry-meta"><strong>Edited:</strong> <time class="js-local-time" datetime="{{ log_entry.entry_updated_at }}">{{ log_entry.entry_updated_at }}</time></p>
     {% endif %}
 
-    {% if log_entry.body_text %}
+    {% if log_entry.entry_body_text %}
     {% if log_mode == "compact" %}
-    <p class="entry-body-compact">{{ log_entry.body_text|truncate(140, true, "...") }}</p>
+    <p class="entry-body-compact">{{ log_entry.entry_body_text|truncate(140, true, "...") }}</p>
     {% else %}
-    <p>{{ log_entry.body_text }}</p>
+    <p>{{ log_entry.entry_body_text }}</p>
     {% endif %}
     {% elif log_mode == "compact" %}
     <p class="entry-body-compact">No note text.</p>
@@ -30,7 +30,7 @@
     <ul>
         {% for attachment in log_entry_attachments %}
         <li>
-            <a href="/attachments/{{ attachment.attachment_uid }}">{{ attachment.original_filename }}</a>
+            <a href="/attachments/{{ attachment.attachment_uid }}">{{ attachment.attachment_original_filename }}</a>
         </li>
         {% endfor %}
     </ul>

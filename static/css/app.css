@@ -380,11 +380,11 @@ h2 {
     gap: 10px;
 }
 
-#rep_name {
+#entry_rep_name {
     max-width: 30ch;
 }
 
-#interaction_at_local {
+#entry_interaction_at_local {
     max-width: 20ch;
 }
 

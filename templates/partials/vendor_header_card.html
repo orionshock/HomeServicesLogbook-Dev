@@ -1,34 +1,30 @@
 <section class="content-section vendor-header-details-card">
     <div class="vendor-header-main">
-        <h1>{{ vendor.name }}{% if vendor.archived_at %} <span class="archived-badge">Archived</span>{% endif %}</h1>
+        <h1>{{ vendor.vendor_name }}{% if vendor.vendor_archived_at %} <span class="archived-badge">Archived</span>{% endif %}</h1>
 
         <ul class="details-list vendor-details-list">
-            {% if vendor.category %}
-            <li><strong>Category:</strong> {{ vendor.category }}</li>
+            {% if vendor.vendor_label %}
+            <li><strong>Vendor Label:</strong> {{ vendor.vendor_label }}</li>
             {% endif %}
 
-            {% if vendor.account_number %}
-            <li><strong>Account Number:</strong> {{ vendor.account_number }}</li>
+            {% if vendor.vendor_account_number %}
+            <li><strong>Account Number:</strong> {{ vendor.vendor_account_number }}</li>
             {% endif %}
 
-            {% if vendor.name_on_account %}
-            <li><strong>Name on Account:</strong> {{ vendor.name_on_account }}</li>
+            {% if vendor.vendor_phone_number %}
+            <li><strong>Vendor Phone Number:</strong> {{ vendor.vendor_phone_number }}</li>
             {% endif %}
 
-            {% if vendor.portal_url %}
-            <li><strong>Portal URL:</strong> <a href="{{ vendor.portal_url }}" target="_blank" rel="noopener noreferrer">{{ vendor.portal_url }}</a></li>
+            {% if vendor.vendor_address %}
+            <li><strong>Vendor Address:</strong> {{ vendor.vendor_address }}</li>
             {% endif %}
 
-            {% if vendor.portal_username %}
-            <li><strong>Portal Username:</strong> {{ vendor.portal_username }}</li>
+            {% if vendor.vendor_portal_url %}
+            <li><strong>Portal URL:</strong> <a href="{{ vendor.vendor_portal_url }}" target="_blank" rel="noopener noreferrer">{{ vendor.vendor_portal_url }}</a></li>
             {% endif %}
 
-            {% if vendor.phone_on_file %}
-            <li><strong>Phone on File:</strong> {{ vendor.phone_on_file }}</li>
-            {% endif %}
-
-            {% if vendor.security_pin %}
-            <li><strong>Security PIN:</strong> {{ vendor.security_pin }}</li>
+            {% if vendor.vendor_portal_username %}
+            <li><strong>Portal Username:</strong> {{ vendor.vendor_portal_username }}</li>
             {% endif %}
 
             {% if vendor.vendor_notes %}
@@ -43,7 +39,7 @@
             <summary class="overflow-trigger" aria-label="Vendor actions">...</summary>
             <div class="overflow-menu-panel">
                 <a href="/vendor/{{ vendor.vendor_uid }}/edit" class="btn btn-secondary">Edit Vendor</a>
-                {% if not vendor.archived_at %}
+                {% if not vendor.vendor_archived_at %}
                 <form method="post" action="/vendor/{{ vendor.vendor_uid }}/archive" class="overflow-form">
                     <button type="submit" class="btn btn-danger">Archive Vendor</button>
                 </form>

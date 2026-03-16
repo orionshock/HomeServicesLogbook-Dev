@@ -42,8 +42,8 @@ def _resolve_current_actor(_request: Request) -> dict[str, str]:
     }
 
 
-def _normalize_interaction_at_utc(interaction_at_utc: str) -> str | None:
-    raw_value = (interaction_at_utc or "").strip()
+def _normalize_entry_interaction_at_utc(entry_interaction_at_utc: str) -> str | None:
+    raw_value = (entry_interaction_at_utc or "").strip()
     if not raw_value:
         return None
 
@@ -53,13 +53,13 @@ def _normalize_interaction_at_utc(interaction_at_utc: str) -> str | None:
     except ValueError as exc:
         raise HTTPException(
             status_code=400,
-            detail="interaction_at must be a valid UTC ISO timestamp",
+            detail="entry_interaction_at must be a valid UTC ISO timestamp",
         ) from exc
 
     if parsed_dt.tzinfo is None or parsed_dt.utcoffset() != timedelta(0):
         raise HTTPException(
             status_code=400,
-            detail="interaction_at must be UTC (offset 00:00)",
+            detail="entry_interaction_at must be UTC (offset 00:00)",
         )
 
     return parsed_dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -204,8 +204,8 @@ def _get_submitted_attachments(attachments: list[UploadFile] | None) -> list[Upl
     return [upload for upload in attachments if upload and upload.filename]
 
 
-def _delete_attachment_file(relative_path: str) -> None:
-    rel_path = Path(relative_path)
+def _delete_attachment_file(attachment_relative_path: str) -> None:
+    rel_path = Path(attachment_relative_path)
     abs_path = (BASE_DIR / rel_path).resolve()
     uploads_root = (BASE_DIR / "uploads").resolve()
 
@@ -224,16 +224,16 @@ def _store_uploaded_attachment(upload: UploadFile, entry_id: int, actor: str) ->
     absolute_dir = BASE_DIR / relative_dir
     absolute_dir.mkdir(parents=True, exist_ok=True)
 
-    original_filename = _sanitize_original_filename(upload.filename or "")
-    if not Path(original_filename).suffix:
+    attachment_original_filename = _sanitize_original_filename(upload.filename or "")
+    if not Path(attachment_original_filename).suffix:
         raise HTTPException(
             status_code=400,
             detail="Attachment filename must include an extension",
         )
 
-    stored_filename = _make_stored_filename(original_filename)
-    relative_path = relative_dir / stored_filename
-    disk_path = absolute_dir / stored_filename
+    attachment_stored_filename = _make_stored_filename(attachment_original_filename)
+    attachment_relative_path = relative_dir / attachment_stored_filename
+    disk_path = absolute_dir / attachment_stored_filename
 
     bytes_written = 0
     chunk_size = 1024 * 1024
@@ -264,13 +264,13 @@ def _store_uploaded_attachment(upload: UploadFile, entry_id: int, actor: str) ->
     create_attachment(
         attachment_uid=make_uid("attachment"),
         entry_id=entry_id,
-        original_filename=original_filename,
-        stored_filename=stored_filename,
-        relative_path=str(relative_path).replace("\\", "/"),
-        mime_type=upload.content_type,
-        file_size=bytes_written,
-        created_by=actor,
-        created_at=utc_now_iso(),
+        attachment_original_filename=attachment_original_filename,
+        attachment_stored_filename=attachment_stored_filename,
+        attachment_relative_path=str(attachment_relative_path).replace("\\", "/"),
+        attachment_mime_type=upload.content_type,
+        attachment_file_size=bytes_written,
+        attachment_created_by=actor,
+        attachment_created_at=utc_now_iso(),
     )
 
 
@@ -381,34 +381,32 @@ def vendor_new_form(request: Request):
 @app.post("/vendors/new")
 def vendor_new_submit(
     request: Request,
-    name: str = Form(...),
-    category: str = Form(""),
-    account_number: str = Form(""),
-    name_on_account: str = Form(""),
-    portal_url: str = Form(""),
-    portal_username: str = Form(""),
-    phone_on_file: str = Form(""),
-    security_pin: str = Form(""),
+    vendor_name: str = Form(...),
+    vendor_label: str = Form(""),
+    vendor_account_number: str = Form(""),
+    vendor_portal_url: str = Form(""),
+    vendor_portal_username: str = Form(""),
+    vendor_phone_number: str = Form(""),
+    vendor_address: str = Form(""),
     vendor_notes: str = Form(""),
 ):
     actor = request.state.current_actor["actor_id"]
-    clean_name = _normalize_required_text(name, "Vendor name")
-    clean_portal_url = _normalize_portal_url(portal_url)
-    vendor_uid = make_uid("vendor", name=clean_name)
+    clean_vendor_name = _normalize_required_text(vendor_name, "Vendor name")
+    clean_vendor_portal_url = _normalize_portal_url(vendor_portal_url)
+    vendor_uid = make_uid("vendor", name=clean_vendor_name)
     now = utc_now_iso()
     create_vendor(
         vendor_uid=vendor_uid,
-        name=clean_name,
-        category=category or None,
-        account_number=account_number or None,
-        name_on_account=name_on_account or None,
-        portal_url=clean_portal_url,
-        portal_username=portal_username or None,
-        phone_on_file=phone_on_file or None,
-        security_pin=security_pin or None,
+        vendor_name=clean_vendor_name,
+        vendor_label=vendor_label or None,
+        vendor_account_number=vendor_account_number or None,
+        vendor_portal_url=clean_vendor_portal_url,
+        vendor_portal_username=vendor_portal_username or None,
+        vendor_phone_number=vendor_phone_number or None,
+        vendor_address=vendor_address or None,
         vendor_notes=vendor_notes or None,
-        created_at=now,
-        created_by=actor,
+        vendor_created_at=now,
+        vendor_created_by=actor,
     )
     return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
 
@@ -452,7 +450,7 @@ def vendor_list(request: Request, show_archived: int | None = None):
 def vendor_archive(request: Request, vendor_uid: str):
     actor = request.state.current_actor["actor_id"]
     now = utc_now_iso()
-    found = archive_vendor_by_uid(vendor_uid, archived_at=now, updated_by=actor)
+    found = archive_vendor_by_uid(vendor_uid, vendor_archived_at=now, vendor_updated_by=actor)
     if not found:
         raise HTTPException(status_code=404, detail="Vendor not found")
     return RedirectResponse(url="/vendors", status_code=303)
@@ -462,7 +460,7 @@ def vendor_archive(request: Request, vendor_uid: str):
 def vendor_unarchive(request: Request, vendor_uid: str):
     actor = request.state.current_actor["actor_id"]
     now = utc_now_iso()
-    found = unarchive_vendor_by_uid(vendor_uid, updated_at=now, updated_by=actor)
+    found = unarchive_vendor_by_uid(vendor_uid, vendor_updated_at=now, vendor_updated_by=actor)
     if not found:
         raise HTTPException(status_code=404, detail="Vendor not found")
     return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
@@ -486,7 +484,7 @@ def vendor_detail(request: Request, vendor_uid: str):
             "breadcrumbs": [
                 {"label": "Home", "url": "/"},
                 {"label": "Vendors", "url": "/vendors"},
-                {"label": vendor["name"], "url": None},
+                {"label": vendor["vendor_name"], "url": None},
             ],
             "vendor": vendor,
             "entries": entries,
@@ -501,7 +499,7 @@ def vendor_entry_new_form(request: Request, vendor_uid: str):
     if vendor is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
 
-    if vendor["archived_at"]:
+    if vendor["vendor_archived_at"]:
         raise HTTPException(
             status_code=400,
             detail="Archived vendors cannot accept new entries. Unarchive vendor to continue.",
@@ -519,7 +517,7 @@ def vendor_entry_new_form(request: Request, vendor_uid: str):
             "breadcrumbs": [
                 {"label": "Home", "url": "/"},
                 {"label": "Vendors", "url": "/vendors"},
-                {"label": vendor["name"], "url": f"/vendor/{vendor_uid}"},
+                {"label": vendor["vendor_name"], "url": f"/vendor/{vendor_uid}"},
                 {"label": "New Entry", "url": None},
             ],
             "mode": "create",
@@ -547,7 +545,7 @@ def vendor_edit_form(request: Request, vendor_uid: str):
             "breadcrumbs": [
                 {"label": "Home", "url": "/"},
                 {"label": "Vendors", "url": "/vendors"},
-                {"label": vendor["name"], "url": f"/vendor/{vendor_uid}"},
+                {"label": vendor["vendor_name"], "url": f"/vendor/{vendor_uid}"},
                 {"label": "Edit", "url": None},
             ],
             "vendor": vendor,
@@ -562,34 +560,32 @@ def vendor_edit_form(request: Request, vendor_uid: str):
 def vendor_edit_submit(
     request: Request,
     vendor_uid: str,
-    name: str = Form(...),
-    category: str = Form(""),
-    account_number: str = Form(""),
-    name_on_account: str = Form(""),
-    portal_url: str = Form(""),
-    portal_username: str = Form(""),
-    phone_on_file: str = Form(""),
-    security_pin: str = Form(""),
+    vendor_name: str = Form(...),
+    vendor_label: str = Form(""),
+    vendor_account_number: str = Form(""),
+    vendor_portal_url: str = Form(""),
+    vendor_portal_username: str = Form(""),
+    vendor_phone_number: str = Form(""),
+    vendor_address: str = Form(""),
     vendor_notes: str = Form(""),
 ):
     actor = request.state.current_actor["actor_id"]
-    clean_name = _normalize_required_text(name, "Vendor name")
-    clean_portal_url = _normalize_portal_url(portal_url)
+    clean_vendor_name = _normalize_required_text(vendor_name, "Vendor name")
+    clean_vendor_portal_url = _normalize_portal_url(vendor_portal_url)
     if get_vendor_by_uid(vendor_uid) is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
     update_vendor_by_uid(
         vendor_uid=vendor_uid,
-        name=clean_name,
-        category=category or None,
-        account_number=account_number or None,
-        name_on_account=name_on_account or None,
-        portal_url=clean_portal_url,
-        portal_username=portal_username or None,
-        phone_on_file=phone_on_file or None,
-        security_pin=security_pin or None,
+        vendor_name=clean_vendor_name,
+        vendor_label=vendor_label or None,
+        vendor_account_number=vendor_account_number or None,
+        vendor_portal_url=clean_vendor_portal_url,
+        vendor_portal_username=vendor_portal_username or None,
+        vendor_phone_number=vendor_phone_number or None,
+        vendor_address=vendor_address or None,
         vendor_notes=vendor_notes or None,
-        updated_at=utc_now_iso(),
-        updated_by=actor,
+        vendor_updated_at=utc_now_iso(),
+        vendor_updated_by=actor,
     )
     return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
 
@@ -600,7 +596,7 @@ def attachment_download(attachment_uid: str):
     if attachment is None:
         raise HTTPException(status_code=404, detail="Attachment not found")
 
-    rel_path = Path(attachment["relative_path"])
+    rel_path = Path(attachment["attachment_relative_path"])
     abs_path = (BASE_DIR / rel_path).resolve()
     uploads_root = (BASE_DIR / "uploads").resolve()
 
@@ -609,8 +605,8 @@ def attachment_download(attachment_uid: str):
 
     return FileResponse(
         path=abs_path,
-        media_type=attachment["mime_type"] or "application/octet-stream",
-        filename=attachment["original_filename"],
+        media_type=attachment["attachment_mime_type"] or "application/octet-stream",
+        filename=attachment["attachment_original_filename"],
     )
 
 
@@ -630,7 +626,7 @@ def entry_edit_form(request: Request, entry_uid: str):
     for item in list_attachments_for_entry_ids([e["id"] for e in entries]):
         attachments_by_entry.setdefault(item["entry_id"], []).append(item)
 
-    entry_crumb_label = entry["title"] if entry["title"] else entry_uid
+    entry_crumb_label = entry["entry_title"] if entry["entry_title"] else entry_uid
     return _render_template(
         request,
         "entry_form.html",
@@ -638,7 +634,7 @@ def entry_edit_form(request: Request, entry_uid: str):
             "breadcrumbs": [
                 {"label": "Home", "url": "/"},
                 {"label": "Vendors", "url": "/vendors"},
-                {"label": vendor["name"], "url": f"/vendor/{vendor['vendor_uid']}"},
+                {"label": vendor["vendor_name"], "url": f"/vendor/{vendor['vendor_uid']}"},
                 {"label": f"Edit Entry - {entry_crumb_label}", "url": None},
             ],
             "mode": "edit",
@@ -658,10 +654,10 @@ def entry_edit_form(request: Request, entry_uid: str):
 def entry_edit_submit(
     request: Request,
     entry_uid: str,
-    body_text: str = Form(""),
-    title: str = Form(""),
-    interaction_at: str = Form(""),
-    rep_name: str = Form(""),
+    entry_body_text: str = Form(""),
+    entry_title: str = Form(""),
+    entry_interaction_at: str = Form(""),
+    entry_rep_name: str = Form(""),
     remove_attachment_uids: list[str] | None = Form(None),
     attachments: list[UploadFile] | None = File(None),
 ):
@@ -676,18 +672,18 @@ def entry_edit_submit(
 
     update_entry_by_uid(
         entry_uid=entry_uid,
-        title=title or None,
-        interaction_at=_normalize_interaction_at_utc(interaction_at),
-        body_text=body_text or None,
-        rep_name=rep_name or None,
-        updated_at=utc_now_iso(),
-        updated_by=actor,
+        entry_title=entry_title or None,
+        entry_interaction_at=_normalize_entry_interaction_at_utc(entry_interaction_at),
+        entry_body_text=entry_body_text or None,
+        entry_rep_name=entry_rep_name or None,
+        entry_updated_at=utc_now_iso(),
+        entry_updated_by=actor,
     )
 
     for attachment_uid in set(remove_attachment_uids or []):
         deleted_attachment = delete_attachment_by_uid_for_entry(entry["id"], attachment_uid)
         if deleted_attachment is not None:
-            _delete_attachment_file(deleted_attachment["relative_path"])
+            _delete_attachment_file(deleted_attachment["attachment_relative_path"])
 
     _store_uploaded_attachments(new_attachments, entry_id=entry["id"], actor=actor)
 
@@ -698,10 +694,10 @@ def entry_edit_submit(
 def create_vendor_entry(
     request: Request,
     vendor_uid: str,
-    body_text: str = Form(""),
-    title: str = Form(""),
-    interaction_at: str = Form(""),
-    rep_name: str = Form(""),
+    entry_body_text: str = Form(""),
+    entry_title: str = Form(""),
+    entry_interaction_at: str = Form(""),
+    entry_rep_name: str = Form(""),
     attachments: list[UploadFile] | None = File(None),
 ):
     actor = request.state.current_actor["actor_id"]
@@ -709,7 +705,7 @@ def create_vendor_entry(
     if vendor is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
 
-    if vendor["archived_at"]:
+    if vendor["vendor_archived_at"]:
         raise HTTPException(
             status_code=400,
             detail="Archived vendors cannot accept new entries. Unarchive vendor to continue.",
@@ -720,18 +716,24 @@ def create_vendor_entry(
         _validate_attachment_upload(upload)
 
     # Skip record creation if every field is blank and no files were attached.
-    if not any([body_text.strip(), title.strip(), interaction_at.strip(), rep_name.strip(), new_attachments]):
+    if not any([
+        entry_body_text.strip(),
+        entry_title.strip(),
+        entry_interaction_at.strip(),
+        entry_rep_name.strip(),
+        new_attachments,
+    ]):
         return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
 
     entry_id = create_entry(
         entry_uid=make_uid("entry"),
         vendor_id=vendor["id"],
-        title=title or None,
-        interaction_at=_normalize_interaction_at_utc(interaction_at),
-        body_text=body_text or None,
-        rep_name=rep_name or None,
-        created_by=actor,
-        created_at=utc_now_iso(),
+        entry_title=entry_title or None,
+        entry_interaction_at=_normalize_entry_interaction_at_utc(entry_interaction_at),
+        entry_body_text=entry_body_text or None,
+        entry_rep_name=entry_rep_name or None,
+        entry_created_by=actor,
+        entry_created_at=utc_now_iso(),
     )
 
     _store_uploaded_attachments(new_attachments, entry_id=entry_id, actor=actor)

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ vendor.name }} — Home Services Logbook{% endblock %}
+{% block title %}{{ vendor.vendor_name }} — Home Services Logbook{% endblock %}
 
 {% block content %}
 <div class="vendor-detail-page">
@@ -8,14 +8,14 @@
     {% include "partials/vendor_header_card.html" %}
 
     <div class="vendor-header-actions-row">
-        {% if not vendor.archived_at %}
+        {% if not vendor.vendor_archived_at %}
         <a href="/vendor/{{ vendor.vendor_uid }}/entries/new" class="btn btn-primary">New Entry</a>
         {% endif %}
     </div>
 
-    {% if vendor.archived_at %}
+    {% if vendor.vendor_archived_at %}
     <div class="message-card archived-notice">
-        This vendor was archived on <time class="js-local-time" datetime="{{ vendor.archived_at }}">{{ vendor.archived_at }}</time>. The history below is read-only.
+        This vendor was archived on <time class="js-local-time" datetime="{{ vendor.vendor_archived_at }}">{{ vendor.vendor_archived_at }}</time>. The history below is read-only.
     </div>
     {% endif %}
 

@@ -21,36 +21,32 @@
 <section class="content-section">
     <form method="post" action="{{ form_action }}">
         <div class="form-field">
-            <label for="name">Vendor Name *</label>
-            <input type="text" id="name" name="name" required value="{% if vendor %}{{ vendor.name or '' }}{% endif %}">
+            <label for="vendor_name">Vendor Name *</label>
+            <input type="text" id="vendor_name" name="vendor_name" required value="{% if vendor %}{{ vendor.vendor_name or '' }}{% endif %}">
         </div>
         <div class="form-field">
-            <label for="category">Category</label>
-            <input type="text" id="category" name="category" placeholder="e.g. ISP, HVAC, Plumber" value="{% if vendor %}{{ vendor.category or '' }}{% endif %}">
+            <label for="vendor_label">Vendor Label</label>
+            <input type="text" id="vendor_label" name="vendor_label" placeholder="e.g. ISP, HVAC, Plumber" value="{% if vendor %}{{ vendor.vendor_label or '' }}{% endif %}">
         </div>
         <div class="form-field">
-            <label for="account_number">Account Number</label>
-            <input type="text" id="account_number" name="account_number" value="{% if vendor %}{{ vendor.account_number or '' }}{% endif %}">
+            <label for="vendor_account_number">Account Number</label>
+            <input type="text" id="vendor_account_number" name="vendor_account_number" value="{% if vendor %}{{ vendor.vendor_account_number or '' }}{% endif %}">
         </div>
         <div class="form-field">
-            <label for="name_on_account">Name on Account</label>
-            <input type="text" id="name_on_account" name="name_on_account" value="{% if vendor %}{{ vendor.name_on_account or '' }}{% endif %}">
+            <label for="vendor_portal_url">Portal URL</label>
+            <input type="text" id="vendor_portal_url" name="vendor_portal_url" value="{% if vendor %}{{ vendor.vendor_portal_url or '' }}{% endif %}" placeholder="example.com or https://example.com" autocomplete="url" inputmode="url" title="Optional: enter example.com or a full http/https URL">
         </div>
         <div class="form-field">
-            <label for="portal_url">Portal URL</label>
-            <input type="text" id="portal_url" name="portal_url" value="{% if vendor %}{{ vendor.portal_url or '' }}{% endif %}" placeholder="example.com or https://example.com" autocomplete="url" inputmode="url" title="Optional: enter example.com or a full http/https URL">
+            <label for="vendor_portal_username">Portal Username</label>
+            <input type="text" id="vendor_portal_username" name="vendor_portal_username" value="{% if vendor %}{{ vendor.vendor_portal_username or '' }}{% endif %}">
         </div>
         <div class="form-field">
-            <label for="portal_username">Portal Username</label>
-            <input type="text" id="portal_username" name="portal_username" value="{% if vendor %}{{ vendor.portal_username or '' }}{% endif %}">
+            <label for="vendor_phone_number">Vendor Phone Number</label>
+            <input type="text" id="vendor_phone_number" name="vendor_phone_number" value="{% if vendor %}{{ vendor.vendor_phone_number or '' }}{% endif %}">
         </div>
         <div class="form-field">
-            <label for="phone_on_file">Phone on File</label>
-            <input type="text" id="phone_on_file" name="phone_on_file" value="{% if vendor %}{{ vendor.phone_on_file or '' }}{% endif %}">
-        </div>
-        <div class="form-field">
-            <label for="security_pin">Security PIN</label>
-            <input type="text" id="security_pin" name="security_pin" value="{% if vendor %}{{ vendor.security_pin or '' }}{% endif %}">
+            <label for="vendor_address">Vendor Address</label>
+            <textarea id="vendor_address" name="vendor_address" rows="3">{% if vendor %}{{ vendor.vendor_address or '' }}{% endif %}</textarea>
         </div>
         <div class="form-field">
             <label for="vendor_notes">Vendor Notes</label>

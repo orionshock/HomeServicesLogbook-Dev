@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const MIN_ACTION_PAUSE_MS = 1000;
+  const MIN_ACTION_PAUSE_MS = 150;
 
   // Dev-only route exerciser / sample data loader.
   // Uses the app's real form POST endpoints so it exercises request parsing,
@@ -16,8 +16,8 @@
     vendors: 15,
     entriesPerVendor: 22,
     archiveCount: 5,
-    pauseMsBetweenVendors: 1000,
-    pauseMsBetweenEntries: 1000,
+    pauseMsBetweenVendors: 250,
+    pauseMsBetweenEntries: 200,
     dryRun: false,
     logPrefix: "[HSL Dev Seed]",
   };
@@ -169,6 +169,63 @@
     return out;
   }
 
+  function slugify(value) {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/&/g, "and")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  function randomPortalUrl(vendorName, vendorLabel) {
+    const cleanSlug = slugify(vendorName).replace(/-/g, "");
+    const domainBase = (cleanSlug || slugify(vendorLabel) || "vendor") + ".com";
+    const hostPrefixes = ["portal", "myaccount", "customer", "accounts"];
+    const paths = ["/login", "/account", "/dashboard", "/signin"];
+    return `https://${pick(hostPrefixes)}.${domainBase}${pick(paths)}`;
+  }
+
+  function randomPortalUsername() {
+    const patterns = [
+      `user${randomDigits(6)}`,
+      `customer${randomDigits(5)}`,
+      `acct${randomDigits(6)}`,
+      `homeowner${randomDigits(4)}`,
+      `member${randomDigits(5)}`,
+    ];
+    return pick(patterns);
+  }
+
+  function randomPhoneNumber() {
+    const areaCodes = ["212", "303", "404", "480", "512", "602", "619", "702", "720", "818", "917", "928"];
+    const centralOfficeCode = String(randInt(200, 989));
+    const stationCode = randomDigits(4);
+    return `${pick(areaCodes)}-${centralOfficeCode}-${stationCode}`;
+  }
+
+  function randomStreetAddress() {
+    const streetNames = [
+      "Maple",
+      "Oak",
+      "Cedar",
+      "Willow",
+      "Juniper",
+      "Canyon",
+      "Sunset",
+      "Ridge",
+      "Meadow",
+      "Pine",
+      "Elm",
+      "Lakeview",
+    ];
+    const streetTypes = ["St", "Ave", "Blvd", "Dr", "Ln", "Rd", "Ct", "Way", "Pl"];
+    const cities = ["Phoenix", "Scottsdale", "Tempe", "Mesa", "Chandler", "Gilbert", "Glendale", "Peoria"];
+    const state = "AZ";
+    const zip = `${randInt(85000, 86999)}`;
+    const line1 = `${randInt(100, 9999)} ${pick(streetNames)} ${pick(streetTypes)}`;
+    return `${line1}, ${pick(cities)}, ${state} ${zip}`;
+  }
+
   function randomTicket() {
     return `${randInt(10, 99)}-${randomDigits(6)}`;
   }
@@ -184,33 +241,25 @@
   function buildVendorPool() {
     const combined = [...REAL_VENDOR_NAMES, ...FICTIONAL_VENDOR_NAMES];
     return combined.map((name, idx) => ({
-      name,
-      category: CATEGORIES[idx % CATEGORIES.length],
+      vendor_name: name,
+      vendor_label: CATEGORIES[idx % CATEGORIES.length],
     }));
   }
 
-  function buildVendorPayload(name, category, index) {
+  function buildVendorPayload(vendorName, vendorLabel, index) {
     return new URLSearchParams({
-      name,
-      category,
-      account_number: `${randInt(1000, 9999)}-${randomDigits(6)}`,
-      name_on_account: pick(["Alex Carter", "Morgan Reed", "Jamie Flores", "Taylor Brooks", "Chris Patel"]),
-      portal_url: maybe(`https://portal.example.test/${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, 0.55),
-      portal_username: maybe(`acct_${randomDigits(5)}`, 0.55),
-      phone_on_file: maybe(`555-${randomDigits(3)}-${randomDigits(4)}`, 0.65),
-      security_pin: maybe(randomDigits(4), 0.35),
-      service_location: maybe(pick([
-        "North exterior wall",
-        "Garage utility corner",
-        "Front meter area",
-        "Side gate access",
-        "Laundry room outlet",
-      ]), 0.25),
-      vendor_notes: `Seeded vendor ${index + 1}. Primary category: ${category}. Added for UI testing and route exercise.`,
+      vendor_name: vendorName,
+      vendor_label: vendorLabel,
+      vendor_account_number: `${randInt(1000, 9999)}-${randomDigits(6)}`,
+      vendor_portal_url: randomPortalUrl(vendorName, vendorLabel),
+      vendor_portal_username: randomPortalUsername(),
+      vendor_phone_number: randomPhoneNumber(),
+      vendor_address: randomStreetAddress(),
+      vendor_notes: `Seeded vendor ${index + 1}. Primary label: ${vendorLabel}. Added for UI testing and route exercise.`,
     });
   }
 
-  function buildEntryPayload(vendorName, vendorCategory, entryIndex) {
+  function buildEntryPayload(vendorName, vendorLabel, entryIndex) {
     const titleBase = pick(TITLE_PARTS);
     const includeTicket = Math.random() < 0.55;
     const title = includeTicket
@@ -220,17 +269,17 @@
     const rep = `${pick(FIRST_NAMES)} ${String.fromCharCode(randInt(65, 90))}.`;
     const body = [
       `${pick(NOTE_OPENERS)} ${pick(NOTE_SUBJECTS)} for ${vendorName}.`,
-      `Category context: ${vendorCategory}.`,
+      `Vendor label context: ${vendorLabel}.`,
       `Rep: ${rep}.`,
       maybe(`Reference discussed: ${randomTicket()}.`, 0.45),
       pick(NOTE_CLOSERS),
     ].filter(Boolean).join(" ");
 
     return new URLSearchParams({
-      title,
-      interaction_at: randomPastUtcIso(),
-      rep_name: rep,
-      body_text: body,
+      entry_title: title,
+      entry_interaction_at: randomPastUtcIso(),
+      entry_rep_name: rep,
+      entry_body_text: body,
     });
   }
 
@@ -260,14 +309,14 @@
   }
 
   async function createVendor(vendorDef, index) {
-    const payload = buildVendorPayload(vendorDef.name, vendorDef.category, index);
+    const payload = buildVendorPayload(vendorDef.vendor_name, vendorDef.vendor_label, index);
     const response = await postForm("/vendors/new", payload);
     const vendorUid = extractVendorUid(response.url);
     return { ...vendorDef, vendorUid };
   }
 
   async function createEntry(vendor, entryIndex) {
-    const payload = buildEntryPayload(vendor.name, vendor.category, entryIndex);
+    const payload = buildEntryPayload(vendor.vendor_name, vendor.vendor_label, entryIndex);
     await postForm(`/vendor/${encodeURIComponent(vendor.vendorUid)}/entries`, payload);
   }
 
@@ -300,14 +349,14 @@
 
     for (let i = 0; i < cfg.vendors; i += 1) {
       const vendorDef = vendorPool[i];
-      log(`Creating vendor ${i + 1}/${cfg.vendors}: ${vendorDef.name}`);
+      log(`Creating vendor ${i + 1}/${cfg.vendors}: ${vendorDef.vendor_name}`);
       const vendor = await createVendor(vendorDef, i);
       createdVendors.push(vendor);
       await sleep(pauseMsBetweenVendors);
 
       for (let j = 0; j < cfg.entriesPerVendor; j += 1) {
         if ((j + 1) % 5 === 0 || j === 0) {
-          log(`  entries ${j + 1}/${cfg.entriesPerVendor} for ${vendor.name}`);
+          log(`  entries ${j + 1}/${cfg.entriesPerVendor} for ${vendor.vendor_name}`);
         }
         await createEntry(vendor, j);
         await sleep(pauseMsBetweenEntries);
@@ -317,7 +366,7 @@
     const toArchive = createdVendors.slice(-cfg.archiveCount);
     for (let i = 0; i < toArchive.length; i += 1) {
       const vendor = toArchive[i];
-      log(`Archiving vendor: ${vendor.name}`);
+      log(`Archiving vendor: ${vendor.vendor_name}`);
       await archiveVendor(vendor);
       if (i < toArchive.length - 1) {
         await sleep(pauseMsBetweenVendors);

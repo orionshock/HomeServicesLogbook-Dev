@@ -20,30 +20,30 @@
             <form id="entry-form" method="post" action="{{ form_action }}" enctype="multipart/form-data">
                 <div class="entry-meta-grid">
                     <div class="form-field entry-meta-full-width">
-                        <label for="title" title="Optional">Title</label>
-                        <input type="text" id="title" name="title" placeholder="Short Title or Ticket Number" title="Optional" value="{% if entry %}{{ entry.title or '' }}{% endif %}">
+                        <label for="entry_title" title="Optional">Title</label>
+                        <input type="text" id="entry_title" name="entry_title" placeholder="Short Title or Ticket Number" title="Optional" value="{% if entry %}{{ entry.entry_title or '' }}{% endif %}">
                     </div>
                     <div class="form-field compact-form-field">
-                        <label for="rep_name" title="Optional">Rep Name</label>
-                        <input type="text" id="rep_name" name="rep_name" title="Optional" value="{% if entry %}{{ entry.rep_name or '' }}{% endif %}">
+                        <label for="entry_rep_name" title="Optional">Rep Name</label>
+                        <input type="text" id="entry_rep_name" name="entry_rep_name" title="Optional" value="{% if entry %}{{ entry.entry_rep_name or '' }}{% endif %}">
                     </div>
                     <div class="form-field compact-form-field">
-                        <label for="interaction_at_local" title="Optional">Interaction Date</label>
+                        <label for="entry_interaction_at_local" title="Optional">Interaction Date</label>
                         <input
                             type="datetime-local"
-                            id="interaction_at_local"
-                            name="interaction_at_local"
+                            id="entry_interaction_at_local"
+                            name="entry_interaction_at_local"
                             title="Optional"
                             value=""
-                            data-utc-value="{% if entry and entry.interaction_at %}{{ entry.interaction_at }}{% endif %}"
+                            data-utc-value="{% if entry and entry.entry_interaction_at %}{{ entry.entry_interaction_at }}{% endif %}"
                         >
-                        <input type="hidden" id="interaction_at" name="interaction_at" value="{% if entry and entry.interaction_at %}{{ entry.interaction_at }}{% endif %}">
+                        <input type="hidden" id="entry_interaction_at" name="entry_interaction_at" value="{% if entry and entry.entry_interaction_at %}{{ entry.entry_interaction_at }}{% endif %}">
                     </div>
                 </div>
 
                 <div class="form-field">
-                    <label for="body_text">Entry</label>
-                    <textarea id="body_text" name="body_text" rows="8">{% if entry %}{{ entry.body_text or '' }}{% endif %}</textarea>
+                    <label for="entry_body_text">Entry</label>
+                    <textarea id="entry_body_text" name="entry_body_text" rows="8">{% if entry %}{{ entry.entry_body_text or '' }}{% endif %}</textarea>
                 </div>
 
                 {% if mode == "edit" %}
@@ -57,7 +57,7 @@
                                 <input type="checkbox" name="remove_attachment_uids" value="{{ attachment.attachment_uid }}">
                                 Remove
                             </label>
-                            <a href="/attachments/{{ attachment.attachment_uid }}">{{ attachment.original_filename }}</a>
+                            <a href="/attachments/{{ attachment.attachment_uid }}">{{ attachment.attachment_original_filename }}</a>
                         </li>
                         {% endfor %}
                     </ul>
