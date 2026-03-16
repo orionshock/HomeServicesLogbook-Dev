@@ -13,8 +13,41 @@
     var calendarCancel = document.getElementById("calendar-cancel");
     var interactionAtLocalInput = document.getElementById("interaction_at_local");
     var interactionAtUtcInput = document.getElementById("interaction_at");
+    var entryFormPrimary = document.querySelector(".entry-form-primary");
+    var entryHistorySidebar = document.querySelector(".entry-history-sidebar");
+    var entryHistoryList = document.querySelector(".entry-history-sidebar .entry-history-list");
     if (!form || !fileInput) {
         return;
+    }
+
+    function syncHistorySidebarHeight() {
+        if (!entryFormPrimary || !entryHistorySidebar) {
+            return;
+        }
+
+        if (window.matchMedia("(max-width: 900px)").matches) {
+            entryHistorySidebar.style.height = "";
+            if (entryHistoryList) {
+                entryHistoryList.style.overflowY = "";
+            }
+            return;
+        }
+
+        // Measure natural content height first, then only constrain when overflow would occur.
+        entryHistorySidebar.style.height = "";
+        if (entryHistoryList) {
+            entryHistoryList.style.overflowY = "visible";
+        }
+
+        var formPanelHeight = entryFormPrimary.offsetHeight;
+        var naturalSidebarHeight = entryHistorySidebar.offsetHeight;
+
+        if (naturalSidebarHeight > formPanelHeight) {
+            entryHistorySidebar.style.height = formPanelHeight + "px";
+            if (entryHistoryList) {
+                entryHistoryList.style.overflowY = "auto";
+            }
+        }
     }
 
     function todayIsoDate() {
@@ -249,6 +282,21 @@
 
     setAttachmentName();
     setInteractionDefaults();
+    syncHistorySidebarHeight();
+
+    if (window.ResizeObserver && entryFormPrimary) {
+        var formPanelObserver = new ResizeObserver(function () {
+            syncHistorySidebarHeight();
+        });
+        formPanelObserver.observe(entryFormPrimary);
+    }
+
+    window.addEventListener("resize", syncHistorySidebarHeight);
+
+    if (bodyText) {
+        bodyText.addEventListener("input", syncHistorySidebarHeight);
+        bodyText.addEventListener("mouseup", syncHistorySidebarHeight);
+    }
 
     form.addEventListener("submit", function (event) {
         if (!setInteractionUtcForSubmit()) {
