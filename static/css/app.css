@@ -218,6 +218,10 @@ h2 {
     margin-bottom: 0;
 }
 
+.entry-form-primary {
+    container-type: inline-size;
+}
+
 .entry-history-sidebar h2 {
     margin-bottom: 8px;
 }
@@ -351,18 +355,6 @@ h2 {
     font-weight: 600;
 }
 
-.field-label-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 8px;
-    margin-bottom: 4px;
-}
-
-.field-label-row label {
-    margin-bottom: 0;
-}
-
 .form-field textarea,
 .form-field input[type="text"],
 .form-field input[type="datetime-local"],
@@ -383,8 +375,17 @@ h2 {
 
 .entry-meta-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: fit-content(42ch) fit-content(32ch);
+    justify-content: start;
     gap: 10px;
+}
+
+#rep_name {
+    max-width: 30ch;
+}
+
+#interaction_at_local {
+    max-width: 20ch;
 }
 
 .entry-meta-full-width {
@@ -400,6 +401,12 @@ h2 {
     padding: 7px 10px;
     font-size: 0.95rem;
     min-height: 38px;
+}
+
+@container (max-width: 760px) {
+    .entry-meta-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
 }
 
 .form-field input[type="datetime-local"]::-webkit-calendar-picker-indicator {
@@ -624,14 +631,6 @@ hr {
 
     .calendar-grid {
         grid-template-columns: 1fr;
-    }
-
-    .entry-meta-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .field-label-row {
-        flex-wrap: wrap;
     }
 
     .vendors-actions-row {
