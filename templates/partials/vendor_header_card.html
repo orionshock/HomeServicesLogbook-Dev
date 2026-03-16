@@ -1,36 +1,49 @@
 <section class="content-section vendor-header-details-card">
     <div class="vendor-header-main">
-        <h1>{{ vendor.vendor_name }}{% if vendor.vendor_archived_at %} <span class="archived-badge">Archived</span>{% endif %}</h1>
-
-        <ul class="details-list vendor-details-list">
+        <h1 class="vendor-title">
+            <span class="vendor-title-text">{{ vendor.vendor_name }}</span>
             {% if vendor.vendor_label %}
-            <li><strong>Vendor Label:</strong> {{ vendor.vendor_label }}</li>
+            <span class="vendor-title-subtitle">{{ vendor.vendor_label }}</span>
             {% endif %}
+            {% if vendor.vendor_archived_at %}
+            <span class="archived-badge">Archived</span>
+            {% endif %}
+        </h1>
 
-            {% if vendor.vendor_account_number %}
-            <li><strong>Account Number:</strong> {{ vendor.vendor_account_number }}</li>
-            {% endif %}
+        <div class="vendor-details-grid">
+            <ul class="details-list vendor-details-list">
+                {% if vendor.vendor_phone_number %}
+                <li>
+                    <strong>Phone Number:</strong>
+                    <span class="js-phone-link" data-phone-number="{{ vendor.vendor_phone_number }}">{{ vendor.vendor_phone_number }}</span>
+                </li>
+                {% endif %}
 
-            {% if vendor.vendor_phone_number %}
-            <li><strong>Vendor Phone Number:</strong> {{ vendor.vendor_phone_number }}</li>
-            {% endif %}
+                {% if vendor.vendor_address %}
+                <li><strong>Address:</strong> <a href="https://maps.google.com/?q={{ vendor.vendor_address | urlencode }}" target="_blank" rel="noopener noreferrer">{{ vendor.vendor_address }}</a></li>
+                {% endif %}
 
-            {% if vendor.vendor_address %}
-            <li><strong>Vendor Address:</strong> {{ vendor.vendor_address }}</li>
-            {% endif %}
+                {% if vendor.vendor_account_number %}
+                <li><strong>Account Number:</strong> {{ vendor.vendor_account_number }}</li>
+                {% endif %}
+            </ul>
 
-            {% if vendor.vendor_portal_url %}
-            <li><strong>Portal URL:</strong> <a href="{{ vendor.vendor_portal_url }}" target="_blank" rel="noopener noreferrer">{{ vendor.vendor_portal_url }}</a></li>
-            {% endif %}
+            <ul class="details-list vendor-details-list">
+                {% if vendor.vendor_portal_url %}
+                <li><strong>Portal URL:</strong> <a href="{{ vendor.vendor_portal_url }}" target="_blank" rel="noopener noreferrer">{{ vendor.vendor_portal_url }}</a></li>
+                {% endif %}
 
-            {% if vendor.vendor_portal_username %}
-            <li><strong>Portal Username:</strong> {{ vendor.vendor_portal_username }}</li>
-            {% endif %}
+                {% if vendor.vendor_portal_username %}
+                <li><strong>Portal Username:</strong> {{ vendor.vendor_portal_username }}</li>
+                {% endif %}
+            </ul>
+        </div>
 
-            {% if vendor.vendor_notes %}
-            <li><strong>Vendor Notes:</strong> {{ vendor.vendor_notes }}</li>
-            {% endif %}
-        </ul>
+        {% if vendor.vendor_notes %}
+        <div class="vendor-notes-block">
+            <strong>Notes:</strong> {{ vendor.vendor_notes }}
+        </div>
+        {% endif %}
     </div>
 
     {% if show_actions %}
@@ -53,3 +66,4 @@
     </div>
     {% endif %}
 </section>
+<script src="/static/js/vendor_header_card.js"></script>
