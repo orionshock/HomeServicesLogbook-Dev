@@ -36,7 +36,7 @@ a {
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    padding: 14px 22px;
+    padding: 14px clamp(20px, 5vw, 96px);
     border-bottom: 1px solid var(--line);
     background: rgba(255, 253, 249, 0.92);
     backdrop-filter: blur(2px);
@@ -55,9 +55,9 @@ a {
 }
 
 .app-main {
-    max-width: 1120px;
+    width: 100%;
     margin: 0 auto;
-    padding: 20px;
+    padding: 20px clamp(20px, 5vw, 96px);
 }
 
 .breadcrumbs {
