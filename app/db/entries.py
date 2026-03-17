@@ -1,0 +1,99 @@
+import sqlite3
+
+from .connection import get_connection
+
+
+def list_entries_for_vendor(vendor_id: int) -> list[sqlite3.Row]:
+    with get_connection() as conn:
+        return conn.execute(
+            """
+            SELECT *
+            FROM entries
+            WHERE vendor_id = ?
+              AND entry_archived_at IS NULL
+            ORDER BY entry_created_at DESC, id DESC
+            """,
+            (vendor_id,),
+        ).fetchall()
+
+
+def get_entry_by_uid(entry_uid: str) -> sqlite3.Row | None:
+    """Returns the entry row joined with vendor_uid and vendor name."""
+    with get_connection() as conn:
+        return conn.execute(
+            """
+            SELECT e.*, v.vendor_uid, v.vendor_name
+            FROM entries e
+            JOIN vendors v ON v.id = e.vendor_id
+            WHERE e.entry_uid = ?
+            """,
+            (entry_uid,),
+        ).fetchone()
+
+
+def create_entry(
+    entry_uid: str,
+    vendor_id: int,
+    entry_title: str | None,
+    entry_interaction_at: str | None,
+    entry_body_text: str | None,
+    entry_rep_name: str | None,
+    entry_created_by: str,
+    entry_created_at: str,
+) -> int:
+    """Inserts an entry and returns the new row id."""
+    with get_connection() as conn:
+        cursor = conn.execute(
+            """
+            INSERT INTO entries (
+                entry_uid, vendor_id, entry_title, entry_interaction_at,
+                entry_body_text, entry_rep_name, entry_created_by, entry_created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                entry_uid,
+                vendor_id,
+                entry_title,
+                entry_interaction_at,
+                entry_body_text,
+                entry_rep_name,
+                entry_created_by,
+                entry_created_at,
+            ),
+        )
+        return cursor.lastrowid
+
+
+def update_entry_by_uid(
+    entry_uid: str,
+    entry_title: str | None,
+    entry_interaction_at: str | None,
+    entry_body_text: str | None,
+    entry_rep_name: str | None,
+    entry_updated_at: str,
+    entry_updated_by: str,
+) -> None:
+    with get_connection() as conn:
+        conn.execute(
+            """
+            UPDATE entries
+            SET
+                entry_title = ?,
+                entry_interaction_at = ?,
+                entry_body_text = ?,
+                entry_rep_name = ?,
+                entry_updated_at = ?,
+                entry_updated_by = ?
+            WHERE entry_uid = ?
+            """,
+            (
+                entry_title,
+                entry_interaction_at,
+                entry_body_text,
+                entry_rep_name,
+                entry_updated_at,
+                entry_updated_by,
+                entry_uid,
+            ),
+        )
