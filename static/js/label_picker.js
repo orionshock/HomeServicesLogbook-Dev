@@ -144,7 +144,7 @@
 
         function clearSuggestions() {
             suggestionsHost.innerHTML = "";
-            suggestionsHost.hidden = true;
+            suggestionsHost.classList.remove("is-visible");
         }
 
         function applySuggestionList(list) {
@@ -152,7 +152,7 @@
             suggestionsHost.innerHTML = "";
 
             if (!list.length) {
-                suggestionsHost.hidden = true;
+                suggestionsHost.classList.remove("is-visible");
                 return;
             }
 
@@ -165,7 +165,7 @@
                 suggestionsHost.appendChild(item);
             });
 
-            suggestionsHost.hidden = false;
+            suggestionsHost.classList.add("is-visible");
         }
 
         function addExistingLabel(label) {
