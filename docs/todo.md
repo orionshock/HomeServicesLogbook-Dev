@@ -1,8 +1,7 @@
 # Home Services Logbook TODO
 
 ## Global UX
-- [ ] Warn before navigating away when there are unsaved edits in vendor details or entries.
-- [ ] Improve form validation feedback (clear errors, inline guidance, and recovery hints).
+- [ ] Improve form validation feedback (clear errors, inline guidance).
 
 ## Entries
 ### Log History Behavior

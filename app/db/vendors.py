@@ -3,6 +3,15 @@ import sqlite3
 from .connection import get_connection
 
 
+def _translate_vendor_integrity_error(exc: sqlite3.IntegrityError) -> ValueError:
+    error_text = str(exc).lower()
+    if "vendor_name" in error_text:
+        return ValueError("Vendor name is required")
+    if "vendor_uid" in error_text:
+        return ValueError("A vendor with this identifier already exists")
+    return ValueError("Vendor could not be saved due to invalid data")
+
+
 def get_vendor_by_uid(vendor_uid: str) -> sqlite3.Row | None:
     with get_connection() as conn:
         return conn.execute(
@@ -35,29 +44,32 @@ def create_vendor(
     vendor_created_by: str,
 ) -> None:
     with get_connection() as conn:
-        conn.execute(
-            """
-            INSERT INTO vendors (
-                vendor_uid, vendor_name, vendor_account_number,
-                vendor_portal_url, vendor_portal_username,
-                vendor_phone_number, vendor_address,
-                vendor_notes, vendor_created_at, vendor_created_by
+        try:
+            conn.execute(
+                """
+                INSERT INTO vendors (
+                    vendor_uid, vendor_name, vendor_account_number,
+                    vendor_portal_url, vendor_portal_username,
+                    vendor_phone_number, vendor_address,
+                    vendor_notes, vendor_created_at, vendor_created_by
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    vendor_uid,
+                    vendor_name,
+                    vendor_account_number,
+                    vendor_portal_url,
+                    vendor_portal_username,
+                    vendor_phone_number,
+                    vendor_address,
+                    vendor_notes,
+                    vendor_created_at,
+                    vendor_created_by,
+                ),
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                vendor_uid,
-                vendor_name,
-                vendor_account_number,
-                vendor_portal_url,
-                vendor_portal_username,
-                vendor_phone_number,
-                vendor_address,
-                vendor_notes,
-                vendor_created_at,
-                vendor_created_by,
-            ),
-        )
+        except sqlite3.IntegrityError as exc:
+            raise _translate_vendor_integrity_error(exc) from exc
 
 
 def update_vendor_by_uid(
@@ -73,34 +85,37 @@ def update_vendor_by_uid(
     vendor_updated_by: str,
 ) -> None:
     with get_connection() as conn:
-        conn.execute(
-            """
-            UPDATE vendors
-            SET
-                vendor_name = ?,
-                vendor_account_number = ?,
-                vendor_portal_url = ?,
-                vendor_portal_username = ?,
-                vendor_phone_number = ?,
-                vendor_address = ?,
-                vendor_notes = ?,
-                vendor_updated_at = ?,
-                vendor_updated_by = ?
-            WHERE vendor_uid = ?
-            """,
-            (
-                vendor_name,
-                vendor_account_number,
-                vendor_portal_url,
-                vendor_portal_username,
-                vendor_phone_number,
-                vendor_address,
-                vendor_notes,
-                vendor_updated_at,
-                vendor_updated_by,
-                vendor_uid,
-            ),
-        )
+        try:
+            conn.execute(
+                """
+                UPDATE vendors
+                SET
+                    vendor_name = ?,
+                    vendor_account_number = ?,
+                    vendor_portal_url = ?,
+                    vendor_portal_username = ?,
+                    vendor_phone_number = ?,
+                    vendor_address = ?,
+                    vendor_notes = ?,
+                    vendor_updated_at = ?,
+                    vendor_updated_by = ?
+                WHERE vendor_uid = ?
+                """,
+                (
+                    vendor_name,
+                    vendor_account_number,
+                    vendor_portal_url,
+                    vendor_portal_username,
+                    vendor_phone_number,
+                    vendor_address,
+                    vendor_notes,
+                    vendor_updated_at,
+                    vendor_updated_by,
+                    vendor_uid,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            raise _translate_vendor_integrity_error(exc) from exc
 
 
 def archive_vendor_by_uid(vendor_uid: str, vendor_archived_at: str, vendor_updated_by: str) -> bool:

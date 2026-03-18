@@ -43,16 +43,10 @@ def normalize_entry_interaction_at_utc(entry_interaction_at_utc: str) -> str | N
     try:
         parsed_dt = datetime.fromisoformat(parsed_iso)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail="entry_interaction_at must be a valid UTC ISO timestamp",
-        ) from exc
+        raise ValueError("Interaction Date must be a valid timestamp") from exc
 
     if parsed_dt.tzinfo is None or parsed_dt.utcoffset() != timedelta(0):
-        raise HTTPException(
-            status_code=400,
-            detail="entry_interaction_at must be UTC (offset 00:00)",
-        )
+        raise ValueError("Interaction Date must be UTC (offset 00:00)")
 
     return parsed_dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
@@ -76,17 +70,11 @@ def sanitize_original_filename(filename: str) -> str:
 def validate_attachment_upload(upload: UploadFile, max_upload_bytes: int) -> None:
     raw_name = Path(upload.filename or "").name
     if not Path(raw_name).suffix:
-        raise HTTPException(
-            status_code=400,
-            detail="Attachment filename must include an extension",
-        )
+        raise ValueError("Attachment filename must include an extension")
 
     declared_size = getattr(upload, "size", None)
     if declared_size is not None and declared_size > max_upload_bytes:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Attachment exceeds {max_upload_bytes // (1024 * 1024)} MB size limit",
-        )
+        raise ValueError(f"Attachment exceeds {max_upload_bytes // (1024 * 1024)} MB size limit")
 
 
 def get_submitted_attachments(attachments: list[UploadFile] | None) -> list[UploadFile]:
@@ -230,6 +218,115 @@ def _store_uploaded_attachments(attachments: list[UploadFile], entry_id: int, ac
         _store_uploaded_attachment(upload, entry_id=entry_id, actor=actor)
 
 
+def _normalize_optional_text(value: str) -> str | None:
+    normalized = (value or "").strip()
+    return normalized or None
+
+
+def _select_labels_for_form(
+    all_labels: list,
+    label_uids: list[str],
+    new_label_names: list[str],
+) -> tuple[list, list[str]]:
+    labels_by_uid = {str(item["label_uid"]): item for item in all_labels}
+    selected_labels: list = []
+    seen_uids: set[str] = set()
+    for raw_uid in label_uids:
+        clean_uid = (raw_uid or "").strip()
+        if not clean_uid or clean_uid in seen_uids:
+            continue
+        row = labels_by_uid.get(clean_uid)
+        if row is None:
+            continue
+        seen_uids.add(clean_uid)
+        selected_labels.append(row)
+
+    normalized_new_names: list[str] = []
+    seen_name_keys: set[str] = set()
+    for raw_name in new_label_names:
+        normalized_name = normalize_label_name(raw_name)
+        if not normalized_name:
+            continue
+        name_key = normalized_name.lower()
+        if name_key in seen_name_keys:
+            continue
+        seen_name_keys.add(name_key)
+        normalized_new_names.append(normalized_name)
+
+    return selected_labels, normalized_new_names
+
+
+def _render_entry_form(
+    request: Request,
+    *,
+    mode: str,
+    vendor,
+    entry,
+    form_action: str,
+    submit_label: str,
+    selected_labels: list,
+    submitted_new_label_names: list[str] | None = None,
+    current_entry_uid: str | None = None,
+    remove_attachment_uids_selected: list[str] | None = None,
+    errors: dict[str, str] | None = None,
+    form_error: str | None = None,
+    status_code: int = 200,
+):
+    entries = list_entries_for_vendor(vendor["id"])
+    attachments_by_entry: dict[int, list] = {}
+    labels_by_entry: dict[int, list] = {}
+    for item in list_attachments_for_entry_ids([e["id"] for e in entries]):
+        attachments_by_entry.setdefault(item["entry_id"], []).append(item)
+    for item in entries:
+        labels_by_entry[item["id"]] = list_labels_for_entry_id(item["id"])
+
+    if mode == "edit":
+        entry_crumb_label = entry["entry_title"] if entry and entry.get("entry_title") else current_entry_uid
+        breadcrumbs = [
+            {"label": "Home", "url": "/"},
+            {"label": "Vendors", "url": "/vendors"},
+            {"label": vendor["vendor_name"], "url": f"/vendor/{vendor['vendor_uid']}"},
+            {"label": f"Edit Entry - {entry_crumb_label}", "url": None},
+        ]
+        entry_attachments = list_attachments_for_entry_id(entry["id"])
+    else:
+        breadcrumbs = [
+            {"label": "Home", "url": "/"},
+            {"label": "Vendors", "url": "/vendors"},
+            {"label": vendor["vendor_name"], "url": f"/vendor/{vendor['vendor_uid']}"},
+            {"label": "New Entry", "url": None},
+        ]
+        entry_attachments = []
+
+    response = render_template(
+        request,
+        "entry_form.html",
+        {
+            "breadcrumbs": breadcrumbs,
+            "mode": mode,
+            "vendor": vendor,
+            "vendor_labels": list_labels_for_vendor_id(vendor["id"]),
+            "entry": entry,
+            "entry_attachments": entry_attachments,
+            "entries": entries,
+            "attachments_by_entry": attachments_by_entry,
+            "labels_by_entry": labels_by_entry,
+            "all_labels": list_labels(),
+            "selected_labels": selected_labels,
+            "submitted_new_label_names": submitted_new_label_names or [],
+            "field_label": "Labels",
+            "current_entry_uid": current_entry_uid,
+            "form_action": form_action,
+            "submit_label": submit_label,
+            "remove_attachment_uids_selected": remove_attachment_uids_selected or [],
+            "errors": errors or {},
+            "form_error": form_error or ("Please fix the highlighted fields." if errors else None),
+        },
+    )
+    response.status_code = status_code
+    return response
+
+
 @router.get("/vendor/{vendor_uid}/entries/new")
 def vendor_entry_new_form(request: Request, vendor_uid: str):
     vendor = get_vendor_by_uid(vendor_uid)
@@ -242,38 +339,14 @@ def vendor_entry_new_form(request: Request, vendor_uid: str):
             detail="Archived vendors cannot accept new entries. Unarchive vendor to continue.",
         )
 
-    entries = list_entries_for_vendor(vendor["id"])
-    attachments_by_entry: dict[int, list] = {}
-    labels_by_entry: dict[int, list] = {}
-    for item in list_attachments_for_entry_ids([e["id"] for e in entries]):
-        attachments_by_entry.setdefault(item["entry_id"], []).append(item)
-    for item in entries:
-        labels_by_entry[item["id"]] = list_labels_for_entry_id(item["id"])
-
-    return render_template(
+    return _render_entry_form(
         request,
-        "entry_form.html",
-        {
-            "breadcrumbs": [
-                {"label": "Home", "url": "/"},
-                {"label": "Vendors", "url": "/vendors"},
-                {"label": vendor["vendor_name"], "url": f"/vendor/{vendor_uid}"},
-                {"label": "New Entry", "url": None},
-            ],
-            "mode": "create",
-            "vendor": vendor,
-            "vendor_labels": list_labels_for_vendor_id(vendor["id"]),
-            "entry": None,
-            "entry_attachments": [],
-            "entries": entries,
-            "attachments_by_entry": attachments_by_entry,
-            "labels_by_entry": labels_by_entry,
-            "all_labels": list_labels(),
-            "selected_labels": [],
-            "field_label": "Labels",
-            "form_action": f"/vendor/{vendor_uid}/entries",
-            "submit_label": "Save Entry",
-        },
+        mode="create",
+        vendor=vendor,
+        entry=None,
+        selected_labels=[],
+        form_action=f"/vendor/{vendor_uid}/entries",
+        submit_label="Save Entry",
     )
 
 
@@ -307,41 +380,15 @@ def entry_edit_form(request: Request, entry_uid: str):
     if vendor is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
 
-    entry_attachments = list_attachments_for_entry_id(entry["id"])
-    entries = list_entries_for_vendor(vendor["id"])
-    attachments_by_entry: dict[int, list] = {}
-    labels_by_entry: dict[int, list] = {}
-    for item in list_attachments_for_entry_ids([e["id"] for e in entries]):
-        attachments_by_entry.setdefault(item["entry_id"], []).append(item)
-    for item in entries:
-        labels_by_entry[item["id"]] = list_labels_for_entry_id(item["id"])
-
-    entry_crumb_label = entry["entry_title"] if entry["entry_title"] else entry_uid
-    return render_template(
+    return _render_entry_form(
         request,
-        "entry_form.html",
-        {
-            "breadcrumbs": [
-                {"label": "Home", "url": "/"},
-                {"label": "Vendors", "url": "/vendors"},
-                {"label": vendor["vendor_name"], "url": f"/vendor/{vendor['vendor_uid']}"},
-                {"label": f"Edit Entry - {entry_crumb_label}", "url": None},
-            ],
-            "mode": "edit",
-            "vendor": vendor,
-            "vendor_labels": list_labels_for_vendor_id(vendor["id"]),
-            "entry": entry,
-            "entry_attachments": entry_attachments,
-            "entries": entries,
-            "attachments_by_entry": attachments_by_entry,
-            "labels_by_entry": labels_by_entry,
-            "all_labels": list_labels(),
-            "selected_labels": list_labels_for_entry_id(entry["id"]),
-            "field_label": "Labels",
-            "current_entry_uid": entry_uid,
-            "form_action": f"/entry/{entry_uid}/edit",
-            "submit_label": "Save Entry Changes",
-        },
+        mode="edit",
+        vendor=vendor,
+        entry=dict(entry),
+        selected_labels=list_labels_for_entry_id(entry["id"]),
+        current_entry_uid=entry_uid,
+        form_action=f"/entry/{entry_uid}/edit",
+        submit_label="Save Entry Changes",
     )
 
 
@@ -363,20 +410,83 @@ def entry_edit_submit(
     if entry is None:
         raise HTTPException(status_code=404, detail="Entry not found")
 
+    vendor = get_vendor_by_uid(entry["vendor_uid"])
+    if vendor is None:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    all_labels = list_labels()
+    selected_labels, normalized_new_label_names = _select_labels_for_form(
+        all_labels,
+        label_uids or [],
+        new_label_names or [],
+    )
+    submitted_entry = {
+        "id": entry["id"],
+        "entry_uid": entry_uid,
+        "entry_title": entry_title,
+        "entry_interaction_at": entry_interaction_at,
+        "entry_body_text": entry_body_text,
+        "entry_rep_name": entry_rep_name,
+    }
+    selected_remove_attachment_uids = [item for item in (remove_attachment_uids or []) if item]
+    errors: dict[str, str] = {}
+
     new_attachments = get_submitted_attachments(attachments)
     for upload in new_attachments:
-        validate_attachment_upload(upload, MAX_UPLOAD_BYTES)
+        try:
+            validate_attachment_upload(upload, MAX_UPLOAD_BYTES)
+        except ValueError as exc:
+            errors["attachments"] = str(exc)
+            break
+
+    try:
+        clean_entry_interaction_at = normalize_entry_interaction_at_utc(entry_interaction_at)
+    except ValueError as exc:
+        errors["entry_interaction_at"] = str(exc)
+        clean_entry_interaction_at = None
+
+    if errors:
+        return _render_entry_form(
+            request,
+            mode="edit",
+            vendor=vendor,
+            entry=submitted_entry,
+            selected_labels=selected_labels,
+            submitted_new_label_names=normalized_new_label_names,
+            current_entry_uid=entry_uid,
+            form_action=f"/entry/{entry_uid}/edit",
+            submit_label="Save Entry Changes",
+            remove_attachment_uids_selected=selected_remove_attachment_uids,
+            errors=errors,
+            status_code=400,
+        )
 
     now = utc_now_iso()
-    update_entry_by_uid(
-        entry_uid=entry_uid,
-        entry_title=entry_title or None,
-        entry_interaction_at=normalize_entry_interaction_at_utc(entry_interaction_at),
-        entry_body_text=entry_body_text or None,
-        entry_rep_name=entry_rep_name or None,
-        entry_updated_at=now,
-        entry_updated_by=actor,
-    )
+    try:
+        update_entry_by_uid(
+            entry_uid=entry_uid,
+            entry_title=_normalize_optional_text(entry_title),
+            entry_interaction_at=clean_entry_interaction_at,
+            entry_body_text=_normalize_optional_text(entry_body_text),
+            entry_rep_name=_normalize_optional_text(entry_rep_name),
+            entry_updated_at=now,
+            entry_updated_by=actor,
+        )
+    except ValueError as exc:
+        return _render_entry_form(
+            request,
+            mode="edit",
+            vendor=vendor,
+            entry=submitted_entry,
+            selected_labels=selected_labels,
+            submitted_new_label_names=normalized_new_label_names,
+            current_entry_uid=entry_uid,
+            form_action=f"/entry/{entry_uid}/edit",
+            submit_label="Save Entry Changes",
+            remove_attachment_uids_selected=selected_remove_attachment_uids,
+            form_error=str(exc),
+            status_code=400,
+        )
 
     resolved_label_ids = resolve_submitted_labels(
         label_uids=label_uids or [],
@@ -419,9 +529,33 @@ def create_vendor_entry(
             detail="Archived vendors cannot accept new entries. Unarchive vendor to continue.",
         )
 
+    all_labels = list_labels()
+    selected_labels, normalized_new_label_names = _select_labels_for_form(
+        all_labels,
+        label_uids or [],
+        new_label_names or [],
+    )
+    submitted_entry = {
+        "entry_title": entry_title,
+        "entry_interaction_at": entry_interaction_at,
+        "entry_body_text": entry_body_text,
+        "entry_rep_name": entry_rep_name,
+    }
+    errors: dict[str, str] = {}
+
     new_attachments = get_submitted_attachments(attachments)
     for upload in new_attachments:
-        validate_attachment_upload(upload, MAX_UPLOAD_BYTES)
+        try:
+            validate_attachment_upload(upload, MAX_UPLOAD_BYTES)
+        except ValueError as exc:
+            errors["attachments"] = str(exc)
+            break
+
+    try:
+        clean_entry_interaction_at = normalize_entry_interaction_at_utc(entry_interaction_at)
+    except ValueError as exc:
+        errors["entry_interaction_at"] = str(exc)
+        clean_entry_interaction_at = None
 
     has_submitted_label_values = bool(label_uids) or any(
         normalize_label_name(item or "") for item in (new_label_names or [])
@@ -438,17 +572,45 @@ def create_vendor_entry(
     ]):
         return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
 
+    if errors:
+        return _render_entry_form(
+            request,
+            mode="create",
+            vendor=vendor,
+            entry=submitted_entry,
+            selected_labels=selected_labels,
+            submitted_new_label_names=normalized_new_label_names,
+            form_action=f"/vendor/{vendor_uid}/entries",
+            submit_label="Save Entry",
+            errors=errors,
+            status_code=400,
+        )
+
     now = utc_now_iso()
-    entry_id = create_entry(
-        entry_uid=make_uid("entry"),
-        vendor_id=vendor["id"],
-        entry_title=entry_title or None,
-        entry_interaction_at=normalize_entry_interaction_at_utc(entry_interaction_at),
-        entry_body_text=entry_body_text or None,
-        entry_rep_name=entry_rep_name or None,
-        entry_created_by=actor,
-        entry_created_at=now,
-    )
+    try:
+        entry_id = create_entry(
+            entry_uid=make_uid("entry"),
+            vendor_id=vendor["id"],
+            entry_title=_normalize_optional_text(entry_title),
+            entry_interaction_at=clean_entry_interaction_at,
+            entry_body_text=_normalize_optional_text(entry_body_text),
+            entry_rep_name=_normalize_optional_text(entry_rep_name),
+            entry_created_by=actor,
+            entry_created_at=now,
+        )
+    except ValueError as exc:
+        return _render_entry_form(
+            request,
+            mode="create",
+            vendor=vendor,
+            entry=submitted_entry,
+            selected_labels=selected_labels,
+            submitted_new_label_names=normalized_new_label_names,
+            form_action=f"/vendor/{vendor_uid}/entries",
+            submit_label="Save Entry",
+            form_error=str(exc),
+            status_code=400,
+        )
 
     resolved_label_ids = resolve_submitted_labels(
         label_uids=label_uids or [],
@@ -465,18 +627,18 @@ def create_vendor_entry(
 
 @router.post("/calendar/export")
 def calendar_export_ics(
-    title: str = Form(...),
+    title: str = Form(""),
     event_date: str = Form(...),
     event_time: str = Form(""),
     description: str = Form(""),
 ):
-    clean_title = normalize_required_text(title, "Calendar title")
+    try:
+        clean_title = normalize_required_text(title, "Calendar title")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     clean_date = event_date.strip()
     clean_time = event_time.strip()
     clean_description = description.strip()
-
-    if not clean_title:
-        raise HTTPException(status_code=400, detail="Calendar title is required")
 
     try:
         datetime.strptime(clean_date, "%Y-%m-%d")

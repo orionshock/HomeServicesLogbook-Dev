@@ -87,9 +87,16 @@
                 const uid = chip.dataset.labelUid || "";
                 const name = normalizeName(chip.dataset.labelName || "");
                 const color = chip.dataset.labelColor || "";
-                if (uid && name) {
-                    state.existingByUid.set(uid, { label_uid: uid, name, color });
+                if (!name) {
+                    return;
                 }
+
+                if (uid) {
+                    state.existingByUid.set(uid, { label_uid: uid, name, color });
+                    return;
+                }
+
+                state.newByNameKey.set(toNameKey(name), { name, color: "" });
             });
         }
 

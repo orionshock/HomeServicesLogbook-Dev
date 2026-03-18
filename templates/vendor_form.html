@@ -20,9 +20,16 @@
 
 <section class="content-section">
     <form method="post" action="{{ form_action }}" autocomplete="off" data-unsaved-warning="true">
+        {% if form_error %}
+        <div class="form-error-summary" role="alert">{{ form_error }}</div>
+        {% endif %}
+
         <div class="form-field">
             <label for="vendor_name">Vendor Name *</label>
             <input type="text" id="vendor_name" name="vendor_name" required value="{% if vendor %}{{ vendor.vendor_name or '' }}{% endif %}">
+            {% if errors and errors.get("vendor_name") %}
+            <p class="field-error">{{ errors.get("vendor_name") }}</p>
+            {% endif %}
         </div>
 
         {% set field_name_label_uids = "label_uids" %}
@@ -36,6 +43,9 @@
         <div class="form-field">
             <label for="vendor_portal_url">Portal URL</label>
             <input type="text" id="vendor_portal_url" name="vendor_portal_url" value="{% if vendor %}{{ vendor.vendor_portal_url or '' }}{% endif %}" placeholder="example.com or https://example.com" autocomplete="url" inputmode="url" title="Optional: enter example.com or a full http/https URL">
+            {% if errors and errors.get("vendor_portal_url") %}
+            <p class="field-error">{{ errors.get("vendor_portal_url") }}</p>
+            {% endif %}
         </div>
         <div class="form-field">
             <label for="vendor_portal_username">Portal Username</label>

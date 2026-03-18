@@ -2,9 +2,6 @@ import re
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import HTTPException
-
-
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
@@ -54,5 +51,5 @@ def make_uid(kind: str, name: str | None = None) -> str:
 def normalize_required_text(value: str, field_name: str) -> str:
     normalized = re.sub(r"\s+", " ", (value or "").strip())
     if not normalized:
-        raise HTTPException(status_code=400, detail=f"{field_name} is required")
+        raise ValueError(f"{field_name} is required")
     return normalized

@@ -15,6 +15,18 @@
             <button type="button" class="label-chip-remove" data-remove-label aria-label="Remove {{ label.name }}">&times;</button>
         </span>
         {% endfor %}
+        {% for label_name in submitted_new_label_names | default([]) %}
+        <span
+            class="label-chip"
+            data-label-chip
+            data-label-name="{{ label_name }}"
+            data-label-color=""
+        >
+            <span class="label-chip-dot"></span>
+            <span class="label-chip-text">{{ label_name }}</span>
+            <button type="button" class="label-chip-remove" data-remove-label aria-label="Remove {{ label_name }}">&times;</button>
+        </span>
+        {% endfor %}
     </div>
 
     <div class="label-picker-input-row">
@@ -43,6 +55,9 @@
     <div data-label-hidden-inputs>
         {% for label in selected_labels %}
         <input type="hidden" name="{{ field_name_label_uids | default('label_uids') }}" value="{{ label.label_uid }}" data-hidden-kind="existing">
+        {% endfor %}
+        {% for label_name in submitted_new_label_names | default([]) %}
+        <input type="hidden" name="{{ field_name_new_label_names | default('new_label_names') }}" value="{{ label_name }}" data-hidden-kind="new">
         {% endfor %}
     </div>
 </div>

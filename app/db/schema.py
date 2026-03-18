@@ -9,7 +9,7 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS vendors (
                 id                     INTEGER PRIMARY KEY,
                 vendor_uid             TEXT UNIQUE NOT NULL,
-                vendor_name            TEXT NOT NULL,
+                vendor_name            TEXT NOT NULL CHECK (length(trim(vendor_name)) > 0),
                 vendor_account_number  TEXT,
                 vendor_portal_url      TEXT,
                 vendor_portal_username TEXT,

@@ -378,6 +378,22 @@ h2 {
     margin-bottom: 12px;
 }
 
+.form-error-summary {
+    margin: 0 0 12px;
+    padding: 8px 10px;
+    border: 1px solid #d7b7b7;
+    border-radius: 8px;
+    background: #f9ecec;
+    color: var(--danger);
+    font-size: 0.95rem;
+}
+
+.field-error {
+    margin: 6px 0 0;
+    color: var(--danger);
+    font-size: 0.9rem;
+}
+
 .form-field label {
     display: inline-block;
     margin-bottom: 4px;

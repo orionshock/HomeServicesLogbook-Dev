@@ -43,26 +43,29 @@ def create_entry(
 ) -> int:
     """Inserts an entry and returns the new row id."""
     with get_connection() as conn:
-        cursor = conn.execute(
-            """
-            INSERT INTO entries (
-                entry_uid, vendor_id, entry_title, entry_interaction_at,
-                entry_body_text, entry_rep_name, entry_created_by, entry_created_at
+        try:
+            cursor = conn.execute(
+                """
+                INSERT INTO entries (
+                    entry_uid, vendor_id, entry_title, entry_interaction_at,
+                    entry_body_text, entry_rep_name, entry_created_by, entry_created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    entry_uid,
+                    vendor_id,
+                    entry_title,
+                    entry_interaction_at,
+                    entry_body_text,
+                    entry_rep_name,
+                    entry_created_by,
+                    entry_created_at,
+                ),
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                entry_uid,
-                vendor_id,
-                entry_title,
-                entry_interaction_at,
-                entry_body_text,
-                entry_rep_name,
-                entry_created_by,
-                entry_created_at,
-            ),
-        )
-        return cursor.lastrowid
+            return cursor.lastrowid
+        except sqlite3.IntegrityError as exc:
+            raise ValueError("Entry could not be saved due to invalid data") from exc
 
 
 def update_entry_by_uid(
@@ -75,25 +78,28 @@ def update_entry_by_uid(
     entry_updated_by: str,
 ) -> None:
     with get_connection() as conn:
-        conn.execute(
-            """
-            UPDATE entries
-            SET
-                entry_title = ?,
-                entry_interaction_at = ?,
-                entry_body_text = ?,
-                entry_rep_name = ?,
-                entry_updated_at = ?,
-                entry_updated_by = ?
-            WHERE entry_uid = ?
-            """,
-            (
-                entry_title,
-                entry_interaction_at,
-                entry_body_text,
-                entry_rep_name,
-                entry_updated_at,
-                entry_updated_by,
-                entry_uid,
-            ),
-        )
+        try:
+            conn.execute(
+                """
+                UPDATE entries
+                SET
+                    entry_title = ?,
+                    entry_interaction_at = ?,
+                    entry_body_text = ?,
+                    entry_rep_name = ?,
+                    entry_updated_at = ?,
+                    entry_updated_by = ?
+                WHERE entry_uid = ?
+                """,
+                (
+                    entry_title,
+                    entry_interaction_at,
+                    entry_body_text,
+                    entry_rep_name,
+                    entry_updated_at,
+                    entry_updated_by,
+                    entry_uid,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            raise ValueError("Entry could not be updated due to invalid data") from exc

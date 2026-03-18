@@ -29,52 +29,119 @@ def normalize_portal_url(value: str) -> str | None:
     if not normalized:
         return None
 
+    if any(ch.isspace() for ch in normalized):
+        raise ValueError("Portal URL must not contain spaces")
+
     # Allow common user input like "example.com" by defaulting to HTTPS.
     if "://" not in normalized:
         normalized = f"https://{normalized}"
 
     parsed = urlparse(normalized)
     if parsed.scheme.lower() not in {"http", "https"}:
-        raise HTTPException(
-            status_code=400,
-            detail="Portal URL must start with http:// or https://",
-        )
+        raise ValueError("Portal URL must start with http:// or https://")
 
     if not parsed.netloc or parsed.hostname is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Portal URL must include a valid host",
-        )
+        raise ValueError("Portal URL must include a valid host")
 
     return normalized
 
 
-@router.get("/vendors/new")
-def vendor_new_form(request: Request):
-    return render_template(
+def _normalize_optional_text(value: str) -> str | None:
+    normalized = (value or "").strip()
+    return normalized or None
+
+
+def _select_labels_for_form(
+    all_labels: list,
+    label_uids: list[str],
+    new_label_names: list[str],
+) -> tuple[list, list[str]]:
+    labels_by_uid = {str(item["label_uid"]): item for item in all_labels}
+    selected_labels: list = []
+    seen_uids: set[str] = set()
+    for raw_uid in label_uids:
+        clean_uid = (raw_uid or "").strip()
+        if not clean_uid or clean_uid in seen_uids:
+            continue
+        row = labels_by_uid.get(clean_uid)
+        if row is None:
+            continue
+        seen_uids.add(clean_uid)
+        selected_labels.append(row)
+
+    normalized_new_names: list[str] = []
+    seen_name_keys: set[str] = set()
+    for raw_name in new_label_names:
+        normalized_name = " ".join((raw_name or "").split()).strip()
+        if not normalized_name:
+            continue
+        name_key = normalized_name.lower()
+        if name_key in seen_name_keys:
+            continue
+        seen_name_keys.add(name_key)
+        normalized_new_names.append(normalized_name)
+
+    return selected_labels, normalized_new_names
+
+
+def _render_vendor_form(
+    request: Request,
+    *,
+    is_edit: bool,
+    form_action: str,
+    submit_label: str,
+    vendor: dict | None,
+    selected_labels: list,
+    submitted_new_label_names: list[str] | None = None,
+    errors: dict[str, str] | None = None,
+    status_code: int = 200,
+):
+    page_title = "Edit" if is_edit else "New Vendor"
+    breadcrumbs = [
+        {"label": "Home", "url": "/"},
+        {"label": "Vendors", "url": "/vendors"},
+    ]
+    if is_edit and vendor is not None:
+        breadcrumbs.append({"label": vendor["vendor_name"], "url": f"/vendor/{vendor['vendor_uid']}"})
+    breadcrumbs.append({"label": page_title, "url": None})
+
+    response = render_template(
         request,
         "vendor_form.html",
         {
-            "breadcrumbs": [
-                {"label": "Home", "url": "/"},
-                {"label": "Vendors", "url": "/vendors"},
-                {"label": "New Vendor", "url": None},
-            ],
-            "vendor": None,
+            "breadcrumbs": breadcrumbs,
+            "vendor": vendor,
             "all_labels": list_labels(),
-            "selected_labels": [],
+            "selected_labels": selected_labels,
+            "submitted_new_label_names": submitted_new_label_names or [],
             "field_label": "Categories",
-            "is_edit": False,
-            "form_action": "/vendors/new",
-            "submit_label": "Save Vendor",
+            "is_edit": is_edit,
+            "form_action": form_action,
+            "submit_label": submit_label,
+            "errors": errors or {},
+            "form_error": "Please fix the highlighted fields." if errors else None,
         },
+    )
+    response.status_code = status_code
+    return response
+
+
+@router.get("/vendors/new")
+def vendor_new_form(request: Request):
+    return _render_vendor_form(
+        request,
+        is_edit=False,
+        form_action="/vendors/new",
+        submit_label="Save Vendor",
+        vendor=None,
+        selected_labels=[],
     )
 
 
 @router.post("/vendors/new")
 def vendor_new_submit(
     request: Request,
-    vendor_name: str = Form(...),
+    vendor_name: str = Form(""),
     vendor_account_number: str = Form(""),
     vendor_portal_url: str = Form(""),
     vendor_portal_username: str = Form(""),
@@ -85,22 +152,76 @@ def vendor_new_submit(
     new_label_names: list[str] | None = Form(None),
 ):
     actor = request.state.current_actor["actor_id"]
-    clean_vendor_name = normalize_required_text(vendor_name, "Vendor name")
-    clean_vendor_portal_url = normalize_portal_url(vendor_portal_url)
+    all_labels = list_labels()
+    selected_labels, normalized_new_label_names = _select_labels_for_form(
+        all_labels,
+        label_uids or [],
+        new_label_names or [],
+    )
+    submitted_vendor = {
+        "vendor_name": vendor_name,
+        "vendor_account_number": vendor_account_number,
+        "vendor_portal_url": vendor_portal_url,
+        "vendor_portal_username": vendor_portal_username,
+        "vendor_phone_number": vendor_phone_number,
+        "vendor_address": vendor_address,
+        "vendor_notes": vendor_notes,
+    }
+    errors: dict[str, str] = {}
+
+    try:
+        clean_vendor_name = normalize_required_text(vendor_name, "Vendor name")
+    except ValueError as exc:
+        errors["vendor_name"] = str(exc)
+        clean_vendor_name = ""
+
+    try:
+        clean_vendor_portal_url = normalize_portal_url(vendor_portal_url)
+    except ValueError as exc:
+        errors["vendor_portal_url"] = str(exc)
+        clean_vendor_portal_url = None
+
+    if errors:
+        return _render_vendor_form(
+            request,
+            is_edit=False,
+            form_action="/vendors/new",
+            submit_label="Save Vendor",
+            vendor=submitted_vendor,
+            selected_labels=selected_labels,
+            submitted_new_label_names=normalized_new_label_names,
+            errors=errors,
+            status_code=400,
+        )
+
     vendor_uid = make_uid("vendor", name=clean_vendor_name)
     now = utc_now_iso()
-    create_vendor(
-        vendor_uid=vendor_uid,
-        vendor_name=clean_vendor_name,
-        vendor_account_number=vendor_account_number or None,
-        vendor_portal_url=clean_vendor_portal_url,
-        vendor_portal_username=vendor_portal_username or None,
-        vendor_phone_number=vendor_phone_number or None,
-        vendor_address=vendor_address or None,
-        vendor_notes=vendor_notes or None,
-        vendor_created_at=now,
-        vendor_created_by=actor,
-    )
+    try:
+        create_vendor(
+            vendor_uid=vendor_uid,
+            vendor_name=clean_vendor_name,
+            vendor_account_number=_normalize_optional_text(vendor_account_number),
+            vendor_portal_url=clean_vendor_portal_url,
+            vendor_portal_username=_normalize_optional_text(vendor_portal_username),
+            vendor_phone_number=_normalize_optional_text(vendor_phone_number),
+            vendor_address=_normalize_optional_text(vendor_address),
+            vendor_notes=_normalize_optional_text(vendor_notes),
+            vendor_created_at=now,
+            vendor_created_by=actor,
+        )
+    except ValueError as exc:
+        errors["vendor_name"] = str(exc)
+        return _render_vendor_form(
+            request,
+            is_edit=False,
+            form_action="/vendors/new",
+            submit_label="Save Vendor",
+            vendor=submitted_vendor,
+            selected_labels=selected_labels,
+            submitted_new_label_names=normalized_new_label_names,
+            errors=errors,
+            status_code=400,
+        )
 
     created_vendor = get_vendor_by_uid(vendor_uid)
     if created_vendor is None:
@@ -211,24 +332,13 @@ def vendor_edit_form(request: Request, vendor_uid: str):
     if vendor is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
 
-    return render_template(
+    return _render_vendor_form(
         request,
-        "vendor_form.html",
-        {
-            "breadcrumbs": [
-                {"label": "Home", "url": "/"},
-                {"label": "Vendors", "url": "/vendors"},
-                {"label": vendor["vendor_name"], "url": f"/vendor/{vendor_uid}"},
-                {"label": "Edit", "url": None},
-            ],
-            "vendor": vendor,
-            "all_labels": list_labels(),
-            "selected_labels": list_labels_for_vendor_id(vendor["id"]),
-            "field_label": "Categories",
-            "is_edit": True,
-            "form_action": f"/vendor/{vendor_uid}/edit",
-            "submit_label": "Save Changes",
-        },
+        is_edit=True,
+        form_action=f"/vendor/{vendor_uid}/edit",
+        submit_label="Save Changes",
+        vendor=dict(vendor),
+        selected_labels=list_labels_for_vendor_id(vendor["id"]),
     )
 
 
@@ -236,7 +346,7 @@ def vendor_edit_form(request: Request, vendor_uid: str):
 def vendor_edit_submit(
     request: Request,
     vendor_uid: str,
-    vendor_name: str = Form(...),
+    vendor_name: str = Form(""),
     vendor_account_number: str = Form(""),
     vendor_portal_url: str = Form(""),
     vendor_portal_username: str = Form(""),
@@ -247,24 +357,80 @@ def vendor_edit_submit(
     new_label_names: list[str] | None = Form(None),
 ):
     actor = request.state.current_actor["actor_id"]
-    clean_vendor_name = normalize_required_text(vendor_name, "Vendor name")
-    clean_vendor_portal_url = normalize_portal_url(vendor_portal_url)
     vendor = get_vendor_by_uid(vendor_uid)
     if vendor is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
-    now = utc_now_iso()
-    update_vendor_by_uid(
-        vendor_uid=vendor_uid,
-        vendor_name=clean_vendor_name,
-        vendor_account_number=vendor_account_number or None,
-        vendor_portal_url=clean_vendor_portal_url,
-        vendor_portal_username=vendor_portal_username or None,
-        vendor_phone_number=vendor_phone_number or None,
-        vendor_address=vendor_address or None,
-        vendor_notes=vendor_notes or None,
-        vendor_updated_at=now,
-        vendor_updated_by=actor,
+
+    all_labels = list_labels()
+    selected_labels, normalized_new_label_names = _select_labels_for_form(
+        all_labels,
+        label_uids or [],
+        new_label_names or [],
     )
+    submitted_vendor = {
+        "vendor_uid": vendor_uid,
+        "vendor_name": vendor_name,
+        "vendor_account_number": vendor_account_number,
+        "vendor_portal_url": vendor_portal_url,
+        "vendor_portal_username": vendor_portal_username,
+        "vendor_phone_number": vendor_phone_number,
+        "vendor_address": vendor_address,
+        "vendor_notes": vendor_notes,
+    }
+    errors: dict[str, str] = {}
+
+    try:
+        clean_vendor_name = normalize_required_text(vendor_name, "Vendor name")
+    except ValueError as exc:
+        errors["vendor_name"] = str(exc)
+        clean_vendor_name = ""
+
+    try:
+        clean_vendor_portal_url = normalize_portal_url(vendor_portal_url)
+    except ValueError as exc:
+        errors["vendor_portal_url"] = str(exc)
+        clean_vendor_portal_url = None
+
+    if errors:
+        return _render_vendor_form(
+            request,
+            is_edit=True,
+            form_action=f"/vendor/{vendor_uid}/edit",
+            submit_label="Save Changes",
+            vendor=submitted_vendor,
+            selected_labels=selected_labels,
+            submitted_new_label_names=normalized_new_label_names,
+            errors=errors,
+            status_code=400,
+        )
+
+    now = utc_now_iso()
+    try:
+        update_vendor_by_uid(
+            vendor_uid=vendor_uid,
+            vendor_name=clean_vendor_name,
+            vendor_account_number=_normalize_optional_text(vendor_account_number),
+            vendor_portal_url=clean_vendor_portal_url,
+            vendor_portal_username=_normalize_optional_text(vendor_portal_username),
+            vendor_phone_number=_normalize_optional_text(vendor_phone_number),
+            vendor_address=_normalize_optional_text(vendor_address),
+            vendor_notes=_normalize_optional_text(vendor_notes),
+            vendor_updated_at=now,
+            vendor_updated_by=actor,
+        )
+    except ValueError as exc:
+        errors["vendor_name"] = str(exc)
+        return _render_vendor_form(
+            request,
+            is_edit=True,
+            form_action=f"/vendor/{vendor_uid}/edit",
+            submit_label="Save Changes",
+            vendor=submitted_vendor,
+            selected_labels=selected_labels,
+            submitted_new_label_names=normalized_new_label_names,
+            errors=errors,
+            status_code=400,
+        )
 
     resolved_label_ids = resolve_submitted_labels(
         label_uids=label_uids or [],

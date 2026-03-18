@@ -18,6 +18,10 @@
             <h2>{{ page_title }}</h2>
 
             <form id="entry-form" method="post" action="{{ form_action }}" enctype="multipart/form-data" autocomplete="off" data-unsaved-warning="true">
+                {% if form_error %}
+                <div class="form-error-summary" role="alert">{{ form_error }}</div>
+                {% endif %}
+
                 <div class="entry-meta-grid">
                     <div class="form-field entry-meta-full-width">
                         <label for="entry_title" title="Optional">Title</label>
@@ -38,6 +42,9 @@
                             data-utc-value="{% if entry and entry.entry_interaction_at %}{{ entry.entry_interaction_at }}{% endif %}"
                         >
                         <input type="hidden" id="entry_interaction_at" name="entry_interaction_at" value="{% if entry and entry.entry_interaction_at %}{{ entry.entry_interaction_at }}{% endif %}">
+                        {% if errors and errors.get("entry_interaction_at") %}
+                        <p class="field-error">{{ errors.get("entry_interaction_at") }}</p>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -58,7 +65,7 @@
                         {% for attachment in entry_attachments %}
                         <li>
                             <label>
-                                <input type="checkbox" name="remove_attachment_uids" value="{{ attachment.attachment_uid }}">
+                                <input type="checkbox" name="remove_attachment_uids" value="{{ attachment.attachment_uid }}" {% if remove_attachment_uids_selected and attachment.attachment_uid in remove_attachment_uids_selected %}checked{% endif %}>
                                 Remove
                             </label>
                             <a href="/attachments/{{ attachment.attachment_uid }}">{{ attachment.attachment_original_filename }}</a>
@@ -75,6 +82,9 @@
                     <label for="attachment">{% if mode == "edit" %}Add Attachments (optional){% else %}Attach Documents (optional){% endif %}</label>
                     <input type="file" id="attachment" name="attachments" multiple>
                     <p id="attachment-name" class="attachment-name">No file selected</p>
+                    {% if errors and errors.get("attachments") %}
+                    <p class="field-error">{{ errors.get("attachments") }}</p>
+                    {% endif %}
                 </div>
 
                 <div class="entry-actions-row">

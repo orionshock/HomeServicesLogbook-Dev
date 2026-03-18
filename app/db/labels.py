@@ -225,7 +225,7 @@ def resolve_submitted_labels(
                     created_at=now,
                     created_by=actor,
                 )
-            except sqlite3.IntegrityError:
+            except ValueError:
                 retry_row = get_label_by_name(normalized_name)
                 if retry_row is None:
                     continue
