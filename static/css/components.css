@@ -1,0 +1,85 @@
+.details-list {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.details-list li {
+    margin-bottom: 6px;
+}
+
+.btn {
+    display: inline-block;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: #fff;
+}
+
+.btn-primary:hover:enabled {
+    background: var(--accent-hover);
+}
+
+.btn-secondary {
+    background: var(--surface-strong);
+    border-color: var(--line);
+    color: var(--text);
+}
+
+.btn-secondary:hover:enabled {
+    background: #e6dbca;
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: #fff;
+}
+
+.btn-danger:hover:enabled {
+    background: var(--danger-hover);
+}
+
+.message-card {
+    max-width: 760px;
+}
+
+.message-card h1 {
+    margin-bottom: 8px;
+}
+
+.archived-notice {
+    background: #fff8e1;
+    border-left: 4px solid #f59e0b;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.archived-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: #f59e0b;
+    color: #fff;
+    border-radius: 4px;
+    padding: 2px 6px;
+    vertical-align: middle;
+    margin-left: 8px;
+    position: relative;
+    top: -2px;
+}

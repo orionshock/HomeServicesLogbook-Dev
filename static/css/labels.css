@@ -1,0 +1,255 @@
+.label-picker {
+    position: relative;
+}
+
+.label-picker-selected,
+.label-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.label-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 999px;
+    padding: 3px 8px;
+    font-size: 0.85rem;
+}
+
+.label-chip-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #8a8a8a;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.label-chip-remove {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    font-size: 1rem;
+}
+
+.label-picker-input-row {
+    display: flex;
+    gap: 8px;
+}
+
+.label-picker-input-row input[type="text"] {
+    flex: 1;
+}
+
+.label-picker-suggestions {
+    margin-top: 6px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 420px;
+}
+
+.label-suggestion-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid transparent;
+    background: #fff;
+    border-radius: 6px;
+    padding: 5px 6px;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+}
+
+.label-suggestion-item:hover {
+    border-color: var(--line);
+    background: #faf6ef;
+}
+
+.label-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.label-page-header h1 {
+    margin-bottom: 0;
+}
+
+.label-create-row {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px;
+    background: #fff;
+    margin-bottom: 10px;
+}
+
+.label-management-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.label-management-item {
+    display: block;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px;
+    background: #fff;
+}
+
+.label-management-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.label-management-name-column {
+    min-width: 0;
+}
+
+.label-management-name-view {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 100%;
+}
+
+.label-management-name {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    min-width: 30ch;
+}
+
+.label-management-edit-trigger {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 0;
+    font: inherit;
+    line-height: 1;
+}
+
+.label-management-name-edit {
+    display: none;
+    align-items: center;
+    gap: 8px;
+}
+
+.label-management-item.is-editing .label-management-name-view {
+    display: none;
+}
+
+.label-management-item.is-editing .label-management-name-edit {
+    display: flex;
+}
+
+.label-management-name-input {
+    width: 30ch;
+    max-width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 10px;
+    background: #fff;
+    font: inherit;
+    color: inherit;
+}
+
+.label-management-color-column {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.label-management-name-edit .btn,
+.label-management-delete-column .btn {
+    padding: 6px 10px;
+}
+
+.label-management-delete-column {
+    margin-left: auto;
+}
+
+.label-management-item.is-row-busy {
+    opacity: 0.72;
+}
+
+.label-color-value {
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-family: Consolas, "Courier New", monospace;
+    white-space: nowrap;
+}
+
+.label-management-color-input {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.label-management-color-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.label-management-color-input::-webkit-color-swatch {
+    border: none;
+    border-radius: 5px;
+}
+
+.label-management-color-input::-moz-color-swatch {
+    border: none;
+    border-radius: 5px;
+}
+
+.label-row-error {
+    margin: 8px 0 0;
+    color: var(--danger);
+    font-size: 0.9rem;
+}
+
+.label-color-preview-value {
+    margin: 0;
+    font-family: Consolas, "Courier New", monospace;
+    color: var(--muted);
+}
+
+@media (max-width: 900px) {
+    .label-management-item {
+        padding: 10px;
+    }
+
+    .label-management-row {
+        flex-wrap: wrap;
+    }
+
+    .label-management-delete-column {
+        margin-left: 0;
+    }
+
+    .label-picker-input-row {
+        flex-direction: column;
+    }
+}

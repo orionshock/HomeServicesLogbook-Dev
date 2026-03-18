@@ -70,7 +70,15 @@ HomeServicesLogbook-Dev/
 |       |-- log_entry_card.html
 |       `-- label_picker.html
 |-- static/
-|   |-- css/app.css
+|   |-- css/
+|   |   |-- base.css
+|   |   |-- layout.css
+|   |   |-- components.css
+|   |   |-- forms.css
+|   |   |-- home.css
+|   |   |-- vendors.css
+|   |   |-- entries.css
+|   |   `-- labels.css
 |   `-- js/
 |       |-- entry_form.js
 |       |-- label_picker.js

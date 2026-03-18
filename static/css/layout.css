@@ -1,0 +1,88 @@
+.app-shell {
+    min-height: 100vh;
+}
+
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px clamp(20px, 5vw, 96px);
+    border-bottom: 1px solid var(--line);
+    background: rgba(255, 253, 249, 0.92);
+    backdrop-filter: blur(2px);
+}
+
+.app-nav {
+    display: flex;
+    gap: 12px;
+    font-weight: 600;
+}
+
+.app-actor {
+    font-size: 0.94rem;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.app-main {
+    width: 100%;
+    margin: 0 auto;
+    padding: 20px clamp(20px, 5vw, 96px);
+}
+
+.breadcrumbs {
+    margin: 0 0 12px;
+}
+
+.breadcrumbs-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+.breadcrumbs-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.breadcrumbs-item a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.breadcrumbs-item a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumbs-item.is-current {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.breadcrumb-separator {
+    color: var(--line);
+}
+
+.content-section {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+}
+
+@media (max-width: 900px) {
+    .app-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
