@@ -106,9 +106,6 @@
 }
 
 .vendors-toolbar {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
     margin: 0 0 16px;
 }
 
@@ -123,11 +120,13 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
+    margin: 0;
 }
 
 .vendor-view-mode-label {
     font-weight: 600;
     color: var(--muted);
+    margin: 0;
 }
 
 .vendor-view-toggle.is-active {

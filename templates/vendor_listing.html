@@ -25,11 +25,20 @@
 <h1>Vendors</h1>
 <div class="vendors-actions-row">
     <a href="/vendors/new" class="btn btn-primary">Add Vendor</a>
-    {% if show_archived %}
-    <a href="/vendors?show_archived=0" class="btn btn-danger">Hide Archived</a>
-    {% else %}
-    <a href="/vendors?show_archived=1" class="btn btn-secondary">Show Archived</a>
+    {% if vendors %}
+    <div class="vendor-view-mode-row" role="group" aria-label="Vendor list view mode">
+        <span class="vendor-view-mode-label">View:</span>
+        <button type="button" class="btn btn-secondary vendor-view-toggle is-active" data-view-mode="az" aria-pressed="true">A-Z</button>
+        <button type="button" class="btn btn-secondary vendor-view-toggle" data-view-mode="category" aria-pressed="false">By Category</button>
+    </div>
     {% endif %}
+    <div>
+        {% if show_archived %}
+        <a href="/vendors?show_archived=0" class="btn btn-danger">Hide Archived</a>
+        {% else %}
+        <a href="/vendors?show_archived=1" class="btn btn-secondary">Show Archived</a>
+        {% endif %}
+    </div>
 </div>
 
 {% if vendors %}
@@ -37,12 +46,6 @@
     <div class="vendor-search-bar">
         <label class="vendor-search-label" for="vendorSearch">Filter vendors</label>
         <input type="text" id="vendorSearch" placeholder="Filter vendors…" autocomplete="off">
-    </div>
-
-    <div class="vendor-view-mode-row" role="group" aria-label="Vendor list view mode">
-        <span class="vendor-view-mode-label">View:</span>
-        <button type="button" class="btn btn-secondary vendor-view-toggle is-active" data-view-mode="az" aria-pressed="true">A-Z</button>
-        <button type="button" class="btn btn-secondary vendor-view-toggle" data-view-mode="category" aria-pressed="false">By Category</button>
     </div>
 </div>
 
