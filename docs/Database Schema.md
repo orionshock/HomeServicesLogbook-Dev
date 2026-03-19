@@ -85,14 +85,14 @@ CREATE TABLE IF NOT EXISTS entries (
     entry_created_by     TEXT,
     entry_updated_at     TEXT,
     entry_updated_by     TEXT,
-    entry_archived_at    TEXT,
     FOREIGN KEY (vendor_id) REFERENCES vendors(id)
 );
 ```
 
 Notes:
 - entry_uid is the public identifier used in entry edit URLs.
-- entry_archived_at exists in schema but current app flows primarily use vendor archive and active-entry listing.
+- Entries are immutable once created; users edit them but entries themselves are never archived.
+- Vendor archival is supported via vendor_archived_at.
 
 ## attachments
 

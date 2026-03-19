@@ -10,7 +10,6 @@ def list_entries_for_vendor(vendor_id: int) -> list[sqlite3.Row]:
             SELECT *
             FROM entries
             WHERE vendor_id = ?
-              AND entry_archived_at IS NULL
             ORDER BY entry_created_at DESC, id DESC
             """,
             (vendor_id,),

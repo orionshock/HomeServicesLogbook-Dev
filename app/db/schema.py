@@ -37,7 +37,6 @@ def init_db() -> None:
                 entry_created_by     TEXT,
                 entry_updated_at     TEXT,
                 entry_updated_by     TEXT,
-                entry_archived_at    TEXT,
                 FOREIGN KEY (vendor_id) REFERENCES vendors(id)
             );
 

@@ -49,12 +49,11 @@ HomeServicesLogbook-Dev/
 |   |   |-- labels.py
 |   |   `-- __init__.py
 |   `-- routes/
-|       |-- __init__.py
+|       |-- __init__.py (shared actor management, template rendering)
 |       |-- home.py
 |       |-- vendors.py
 |       |-- entries.py
-|       |-- labels.py
-|       `-- __init__.py
+|       `-- labels.py
 |-- templates/
 |   |-- base.html
 |   |-- home.html
@@ -80,14 +79,16 @@ HomeServicesLogbook-Dev/
 |   |   |-- entries.css
 |   |   `-- labels.css
 |   `-- js/
-|       |-- entry_form.js
-|       |-- label_picker.js
-|       |-- label_admin.js
-|       |-- vendor_header_card.js
-|       |-- vendors.js
-|       |-- time.js
-|       |-- external_links.js
-|       `-- dev_seed_routes.js
+|       |-- actor_control.js (actor/user override UI)
+|       |-- entry_form.js (entry form interactions, calendar, layout resizing)
+|       |-- label_picker.js (label autocomplete and selection)
+|       |-- label_admin.js (label management inline editing)
+|       |-- vendor_header_card.js (phone number link formatting)
+|       |-- vendors.js (A-Z and category view switching, vendor search)
+|       |-- time.js (UTC to local time formatting)
+|       |-- external_links.js (marking external links with icon)
+|       |-- unsaved_changes.js (form dirty state detection, navigation warnings)
+|       `-- dev_seed_routes.js (dev-only test data generation)
 |-- data/
 |   `-- logbook.db
 |-- uploads/
