@@ -15,6 +15,11 @@
 
         formData.forEach(function (value, key) {
             if (value instanceof File) {
+                if (!value.name && value.size === 0) {
+                    entries.push([key, "__file__", "__empty__"]);
+                    return;
+                }
+
                 entries.push([key, "__file__", value.name, String(value.size), String(value.lastModified)]);
                 return;
             }
@@ -30,16 +35,30 @@
             return false;
         }
 
+        if (formState.initialState === null) {
+            return false;
+        }
+
         return buildStableFormState(formState.form) !== formState.initialState;
     }
 
     var formStates = forms.map(function (form) {
         return {
             form: form,
-            initialState: buildStableFormState(form),
+            initialState: null,
             submitting: false,
         };
     });
+
+    // Defer baseline capture so all synchronous page scripts (e.g. datetime
+    // field population, label-picker hidden-input init) finish first.
+    window.setTimeout(function () {
+        formStates.forEach(function (formState) {
+            if (formState.initialState === null) {
+                formState.initialState = buildStableFormState(formState.form);
+            }
+        });
+    }, 50);
 
     function hasDirtyForms() {
         for (var i = 0; i < formStates.length; i += 1) {
