@@ -85,6 +85,7 @@ HomeServicesLogbook-Dev/
 |   `-- js/
 |       |-- actor_control.js (actor/user override UI)
 |       |-- entry_form.js (entry form interactions, calendar, layout resizing)
+|       |-- entry_vendor_picker.js (vendor selection UX for global new-entry flow)
 |       |-- label_picker.js (label autocomplete and selection)
 |       |-- label_admin.js (label management inline editing)
 |       |-- vendor_header_card.js (phone number link formatting)
@@ -99,8 +100,7 @@ HomeServicesLogbook-Dev/
 |-- docs/
 |   |-- Project Architecture.md (system layout, routes, and composition reference)
 |   |-- Database Schema.md (SQLite table/index and lifecycle reference)
-|   |-- Style Guide.md (coding/style conventions for contributors and Copilot)
-|   `-- todo.md (project backlog and open product questions)
+|   `-- Style Guide.md (coding/style conventions for contributors and Copilot)
 |-- requirements.txt (Python dependency list)
 `-- README.md (project overview and quick-start guidance)
 ```
@@ -194,6 +194,7 @@ Actor resolution behavior is controlled by these environment variables:
 
 ## Entries + Attachments + ICS
 
+- GET /entries/new -> Global new-entry vendor picker
 - GET /vendor/{vendor_uid}/entries/new -> New entry form for vendor
 - POST /vendor/{vendor_uid}/entries -> Create entry, labels, and uploads
 - GET /entry/{entry_uid}/edit -> Edit existing entry
@@ -228,6 +229,7 @@ Behavior model:
 - Labels are optional metadata for organization/filtering.
 - Attachments are file-backed and linked to entries.
 - Settings is a singleton row (id = 1) used for home page location metadata.
+- Actor context is resolved per request (override cookie -> optional trusted upstream header -> default user).
 
 ---
 
@@ -235,6 +237,8 @@ Behavior model:
 
 - First app startup initializes schema through lifespan -> init_db().
 - Settings singleton row (id = 1) is inserted during init when missing.
+- settings access helpers also self-heal the singleton row when absent.
 - Development schema changes are applied by recreating data/logbook.db.
 - Upload size cap is 10 MB per file.
 - Attachment path checks prevent file access outside uploads/.
+- Entry creation intentionally no-ops (redirects without insert) when all entry fields, labels, and attachments are blank.

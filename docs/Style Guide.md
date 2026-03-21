@@ -140,8 +140,9 @@ Use clear route names and paths.
 Examples:
 - /vendors
 - /vendor/{vendor_uid}
-- /vendor/{vendor_uid}/entry
-- /entry/{entry_uid}/attachment
+- /vendor/{vendor_uid}/entries/new
+- /entry/{entry_uid}/edit
+- /attachments/{attachment_uid}
 
 Avoid ambiguous route naming.
 

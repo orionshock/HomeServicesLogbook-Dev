@@ -47,7 +47,7 @@ Purpose:
 CREATE TABLE IF NOT EXISTS vendors (
     id                     INTEGER PRIMARY KEY,
     vendor_uid             TEXT UNIQUE NOT NULL,
-    vendor_name            TEXT NOT NULL,
+    vendor_name            TEXT NOT NULL CHECK (length(trim(vendor_name)) > 0),
     vendor_account_number  TEXT,
     vendor_portal_url      TEXT,
     vendor_portal_username TEXT,
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS entries (
 
 Notes:
 - entry_uid is the public identifier used in entry edit URLs.
-- Entries are immutable once created; users edit them but entries themselves are never archived.
+- Entries are editable after creation (title, interaction timestamp, body text, representative, labels, attachments).
 - Vendor archival is supported via vendor_archived_at.
 
 ## attachments
