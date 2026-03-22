@@ -18,6 +18,9 @@
             <h2>{{ page_title }}</h2>
 
             <form id="entry-form" method="post" action="{{ form_action }}" enctype="multipart/form-data" autocomplete="off" data-unsaved-warning="true" data-calendar-export-url="{{ url_for('calendar_export_ics') }}">
+                {% if return_next %}
+                <input type="hidden" name="next" value="{{ return_next }}">
+                {% endif %}
                 {% if form_error %}
                 <div class="form-error-summary" role="alert">{{ form_error }}</div>
                 {% endif %}
@@ -89,7 +92,7 @@
 
                 <div class="entry-actions-row">
                     <div class="entry-actions-left">
-                        <a href="{{ url_for('vendor_detail', vendor_uid=vendor.vendor_uid) }}" class="btn btn-secondary">Cancel</a>
+                        <a href="{{ cancel_url }}" class="btn btn-secondary">Cancel</a>
                     </div>
                     <div class="entry-actions-right-group">
                         <button type="button" id="calendar-trigger" class="btn btn-secondary">Add Calendar Event</button>
@@ -136,6 +139,7 @@
                 {% set log_mode = "compact" %}
                 {% set log_entry_attachments = attachments_by_entry.get(history_entry.id, []) %}
                 {% set log_entry_labels = labels_by_entry.get(history_entry.id, []) %}
+                {% set log_entry_next = return_next %}
                 {% set is_current_entry = (current_entry_uid is defined) and (history_entry.entry_uid == current_entry_uid) %}
                 {% include "partials/log_entry_card.html" %}
                 {% endfor %}

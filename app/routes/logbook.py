@@ -61,6 +61,7 @@ def logbook_page(request: Request, page: int = 1, show_archived: int | None = No
             "has_prev": has_prev,
             "has_next": has_next,
             "show_archived": include_archived,
+            "entry_edit_return_target": path_for(request, "logbook_page"),
         },
     )
 

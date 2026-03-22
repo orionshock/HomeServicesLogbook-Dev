@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import re
+from urllib.parse import urlsplit
 import uuid
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile
@@ -34,6 +35,22 @@ from app.utils import (
 )
 
 router = APIRouter()
+
+
+def _safe_internal_return_target(value: str | None) -> str | None:
+    target = (value or "").strip()
+    if not target:
+        return None
+
+    parsed = urlsplit(target)
+    if parsed.scheme or parsed.netloc:
+        return None
+    if not target.startswith("/"):
+        return None
+    if target.startswith("//"):
+        return None
+
+    return target
 
 
 def _vendor_name_sort_key(vendor: dict) -> str:
@@ -307,6 +324,7 @@ def _render_entry_form(
     remove_attachment_uids_selected: list[str] | None = None,
     errors: dict[str, str] | None = None,
     form_error: str | None = None,
+    return_next: str | None = None,
     status_code: int = 200,
 ):
     entries = list_entries_for_vendor(vendor["id"])
@@ -358,6 +376,8 @@ def _render_entry_form(
             "remove_attachment_uids_selected": remove_attachment_uids_selected or [],
             "errors": errors or {},
             "form_error": form_error or ("Please fix the highlighted fields." if errors else None),
+            "return_next": return_next,
+            "cancel_url": return_next or path_for(request, "vendor_detail", vendor_uid=vendor["vendor_uid"]),
         },
     )
     response.status_code = status_code
@@ -426,7 +446,7 @@ def attachment_download(attachment_uid: str):
 
 
 @router.get("/entry/{entry_uid}/edit")
-def entry_edit_form(request: Request, entry_uid: str):
+def entry_edit_form(request: Request, entry_uid: str, next: str | None = None):
     entry = get_entry_by_uid(entry_uid)
     if entry is None:
         raise HTTPException(status_code=404, detail="Entry not found")
@@ -434,6 +454,8 @@ def entry_edit_form(request: Request, entry_uid: str):
     vendor = get_vendor_by_uid(entry["vendor_uid"])
     if vendor is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
+
+    return_next = _safe_internal_return_target(next)
 
     return _render_entry_form(
         request,
@@ -444,6 +466,7 @@ def entry_edit_form(request: Request, entry_uid: str):
         current_entry_uid=entry_uid,
         form_action=path_for(request, "entry_edit_submit", entry_uid=entry_uid),
         submit_label="Save Entry Changes",
+        return_next=return_next,
     )
 
 
@@ -457,6 +480,7 @@ def entry_edit_submit(
     entry_rep_name: str = Form(""),
     label_uids: list[str] | None = Form(None),
     new_label_names: list[str] | None = Form(None),
+    next: str = Form(""),
     remove_attachment_uids: list[str] | None = Form(None),
     attachments: list[UploadFile] | None = File(None),
 ):
@@ -468,6 +492,8 @@ def entry_edit_submit(
     vendor = get_vendor_by_uid(entry["vendor_uid"])
     if vendor is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
+
+    return_next = _safe_internal_return_target(next)
 
     all_labels = list_labels()
     selected_labels, normalized_new_label_names = _select_labels_for_form(
@@ -513,6 +539,7 @@ def entry_edit_submit(
             submit_label="Save Entry Changes",
             remove_attachment_uids_selected=selected_remove_attachment_uids,
             errors=errors,
+            return_next=return_next,
             status_code=400,
         )
 
@@ -540,6 +567,7 @@ def entry_edit_submit(
             submit_label="Save Entry Changes",
             remove_attachment_uids_selected=selected_remove_attachment_uids,
             form_error=str(exc),
+            return_next=return_next,
             status_code=400,
         )
 
@@ -558,7 +586,8 @@ def entry_edit_submit(
 
     _store_uploaded_attachments(new_attachments, entry_id=entry["id"], actor=actor)
 
-    return RedirectResponse(url=path_for(request, "vendor_detail", vendor_uid=entry["vendor_uid"]), status_code=303)
+    redirect_target = return_next or path_for(request, "vendor_detail", vendor_uid=entry["vendor_uid"])
+    return RedirectResponse(url=redirect_target, status_code=303)
 
 
 @router.post("/vendor/{vendor_uid}/entries")

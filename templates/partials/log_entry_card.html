@@ -12,7 +12,11 @@
         <div class="entry-header-right">
             {% if not (is_current_entry is defined and is_current_entry) %}
             {% call overflow_menu("entry-overflow-actions", "Entry actions") %}
+            {% if log_entry_next is defined and log_entry_next %}
+            <a href="{{ url_for('entry_edit_form', entry_uid=log_entry.entry_uid) }}?next={{ log_entry_next }}" class="overflow-menu-item">Edit Entry</a>
+            {% else %}
             <a href="{{ url_for('entry_edit_form', entry_uid=log_entry.entry_uid) }}" class="overflow-menu-item">Edit Entry</a>
+            {% endif %}
             {% endcall %}
             {% else %}
             <span class="current-entry-badge">Editing</span>
