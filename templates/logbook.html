@@ -12,9 +12,9 @@
             </div>
             <div class="logbook-archived-toggle-wrap">
                 {% if show_archived %}
-                <a href="{{ url_for('logbook_page') }}?show_archived=0" class="logbook-archived-toggle">Hide Archived</a>
+                <a href="{{ url_for('logbook_page') }}?show_archived=0" class="btn btn-danger">📦 Hide Archived</a>
                 {% else %}
-                <a href="{{ url_for('logbook_page') }}?show_archived=1" class="logbook-archived-toggle">Show Archived</a>
+                <a href="{{ url_for('logbook_page') }}?show_archived=1" class="btn btn-secondary">📦 Show Archived</a>
                 {% endif %}
             </div>
         </div>

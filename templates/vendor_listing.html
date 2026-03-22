@@ -10,7 +10,7 @@
             {% for vendor in section.vendors %}
             <li class="vendor-item" data-vendor-item data-name="{{ vendor.vendor_name }}" data-search="{{ vendor.search_text }}">
                 <a href="{{ url_for('vendor_detail', vendor_uid=vendor.vendor_uid) }}">{{ vendor.vendor_name }}</a>
-                {% if vendor.vendor_archived_at %}<span class="archived-badge">Archived</span>{% endif %}
+                {% if vendor.vendor_archived_at %}<span class="archived-badge">📦 Archived</span>{% endif %}
             </li>
             {% endfor %}
         </ol>
@@ -34,9 +34,9 @@
     {% endif %}
     <div>
         {% if show_archived %}
-        <a href="{{ url_for('vendor_list') }}?show_archived=0" class="btn btn-danger">Hide Archived</a>
+        <a href="{{ url_for('vendor_list') }}?show_archived=0" class="btn btn-danger">📦 Hide Archived</a>
         {% else %}
-        <a href="{{ url_for('vendor_list') }}?show_archived=1" class="btn btn-secondary">Show Archived</a>
+        <a href="{{ url_for('vendor_list') }}?show_archived=1" class="btn btn-secondary">📦 Show Archived</a>
         {% endif %}
     </div>
 </div>
