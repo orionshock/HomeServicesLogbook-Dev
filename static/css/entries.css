@@ -407,6 +407,69 @@
     display: none;
 }
 
+.logbook-page-header {
+    margin-bottom: 12px;
+}
+
+.logbook-page-header h1 {
+    margin-bottom: 6px;
+}
+
+.logbook-page-subtitle {
+    margin: 0;
+    color: var(--muted);
+}
+
+.logbook-entry-list {
+    margin-bottom: 12px;
+}
+
+.timeline-entry-logbook .logbook-entry-header-left {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.logbook-entry-vendor-link {
+    color: var(--text);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.logbook-entry-vendor-link:hover {
+    text-decoration: underline;
+}
+
+.logbook-entry-title-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.entry-body-logbook-preview {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.logbook-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.logbook-page-index {
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+.logbook-pagination .btn.is-disabled {
+    pointer-events: none;
+    opacity: 0.65;
+}
+
 @media (max-width: 900px) {
     .entry-form-layout {
         grid-template-columns: 1fr;

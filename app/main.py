@@ -7,6 +7,7 @@ from app.routes import render_template
 from app.routes.entries import router as entries_router
 from app.routes.home import lifespan, router as home_router
 from app.routes.labels import router as labels_router
+from app.routes.logbook import router as logbook_router
 from app.routes.settings import router as settings_router
 from app.routes.vendors import router as vendors_router
 from app.runtime import APP_ROOT_PATH
@@ -84,5 +85,6 @@ app.include_router(home_router)
 app.include_router(actor_router)
 app.include_router(vendors_router)
 app.include_router(entries_router)
+app.include_router(logbook_router)
 app.include_router(labels_router)
 app.include_router(settings_router)

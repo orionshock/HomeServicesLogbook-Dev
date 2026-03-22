@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Logbook - Home Services Logbook{% endblock %}
+
+{% block content %}
+<section class="logbook-page" aria-labelledby="logbook-title">
+    <header class="logbook-page-header">
+        <h1 id="logbook-title">Logbook</h1>
+        <p class="logbook-page-subtitle">Recent service interactions across all vendors.</p>
+    </header>
+
+    {% if entries %}
+    <div class="entry-history-list logbook-entry-list">
+        {% for entry in entries %}
+        {% set log_entry = entry %}
+        {% set log_entry_attachments = attachments_by_entry.get(entry.id, []) %}
+        {% set log_entry_labels = labels_by_entry.get(entry.id, []) %}
+        {% include "partials/logbook_entry_card.html" %}
+        {% endfor %}
+    </div>
+
+    <nav class="logbook-pagination" aria-label="Logbook pagination">
+        {% if has_prev %}
+        <a class="btn btn-secondary" href="{{ url_for('logbook_page') }}?page={{ page - 1 }}">Previous</a>
+        {% else %}
+        <span class="btn btn-secondary is-disabled" aria-disabled="true">Previous</span>
+        {% endif %}
+
+        <span class="logbook-page-index">Page {{ page }}</span>
+
+        {% if has_next %}
+        <a class="btn btn-secondary" href="{{ url_for('logbook_page') }}?page={{ page + 1 }}">Next</a>
+        {% else %}
+        <span class="btn btn-secondary is-disabled" aria-disabled="true">Next</span>
+        {% endif %}
+    </nav>
+    {% else %}
+    <div class="content-section message-card">
+        <p>No entries yet.</p>
+        <p><a href="{{ url_for('entry_vendor_picker') }}">Create a new entry</a></p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

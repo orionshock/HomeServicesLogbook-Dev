@@ -1,0 +1,48 @@
+{% from "macros/overflow_menu.html" import overflow_menu %}
+
+<article class="timeline-entry timeline-entry-logbook">
+    <div class="entry-header">
+        <div class="entry-header-left logbook-entry-header-left">
+            <a class="logbook-entry-vendor-link" href="{{ url_for('vendor_detail', vendor_uid=log_entry.vendor_uid) }}">{{ log_entry.vendor_name }}</a>
+            <div class="logbook-entry-title-row">
+                <h3 class="entry-title">{{ log_entry.entry_title or "Untitled Entry" }}</h3>
+                {% if log_entry_attachments %}
+                <span class="entry-attachment-indicator" title="Has attachments">📎</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="entry-header-right">
+            {% call overflow_menu("entry-overflow-actions", "Entry actions") %}
+            <a href="{{ url_for('entry_edit_form', entry_uid=log_entry.entry_uid) }}" class="overflow-menu-item">Edit Entry</a>
+            {% endcall %}
+        </div>
+    </div>
+
+    <div class="entry-metadata">
+        {% if log_entry.entry_interaction_at %}
+        <p class="entry-subtitle">Interaction: <time class="js-local-time" datetime="{{ log_entry.entry_interaction_at }}">{{ log_entry.entry_interaction_at }}</time></p>
+        {% else %}
+        <p class="entry-subtitle">Logged: <time class="js-local-time" datetime="{{ log_entry.entry_created_at }}">{{ log_entry.entry_created_at }}</time></p>
+        {% endif %}
+        {% if log_entry.entry_rep_name %}
+        <p class="entry-subtitle">Rep: {{ log_entry.entry_rep_name }}</p>
+        {% endif %}
+    </div>
+
+    {% if log_entry_labels %}
+    <div class="entry-labels">
+        <div class="label-chip-list">
+            {% for label in log_entry_labels %}
+            <span class="label-chip">
+                <span class="label-chip-dot"{% if label.color %} style="background-color: {{ label.color }};"{% endif %}></span>
+                <span class="label-chip-text">{{ label.name }}</span>
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if log_entry.entry_body_text %}
+    <p class="entry-body entry-body-logbook-preview">{{ log_entry.entry_body_text }}</p>
+    {% endif %}
+</article>

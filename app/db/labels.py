@@ -195,6 +195,24 @@ def list_labels_for_entry_id(entry_id: int) -> list[sqlite3.Row]:
         ).fetchall()
 
 
+def list_labels_for_entry_ids(entry_ids: list[int]) -> list[sqlite3.Row]:
+    unique_entry_ids = list(dict.fromkeys(entry_ids))
+    if not unique_entry_ids:
+        return []
+
+    placeholders = ", ".join("?" for _ in unique_entry_ids)
+    query = f"""
+        SELECT el.entry_id, l.id, l.label_uid, l.label_name AS name, l.label_color AS color
+        FROM entry_labels el
+        JOIN labels l ON l.id = el.label_id
+        WHERE el.entry_id IN ({placeholders})
+        ORDER BY el.entry_id, l.label_name COLLATE NOCASE
+    """
+
+    with get_connection() as conn:
+        return conn.execute(query, unique_entry_ids).fetchall()
+
+
 def replace_entry_labels(entry_id: int, label_ids: list[int]) -> None:
     unique_label_ids = list(dict.fromkeys(label_ids))
     with get_connection() as conn:
