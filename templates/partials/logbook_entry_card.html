@@ -1,20 +1,27 @@
 {% from "macros/overflow_menu.html" import overflow_menu %}
 
 <article class="timeline-entry timeline-entry-logbook">
-    <div class="entry-header">
-        <div class="entry-header-left logbook-entry-header-left">
+    <div class="entry-header logbook-entry-header">
+        <div class="logbook-entry-vendor-row">
             <a class="logbook-entry-vendor-link" href="{{ url_for('vendor_detail', vendor_uid=log_entry.vendor_uid) }}">{{ log_entry.vendor_name }}</a>
-            <div class="logbook-entry-title-row">
+            {% if log_entry.vendor_archived_at %}
+            <span class="logbook-entry-archived-indicator">📦 Archived</span>
+            {% endif %}
+        </div>
+
+        <div class="logbook-entry-title-row">
+            <div class="logbook-entry-title-main">
                 <h3 class="entry-title">{{ log_entry.entry_title or "Untitled Entry" }}</h3>
                 {% if log_entry_attachments %}
                 <span class="entry-attachment-indicator" title="Has attachments">📎</span>
                 {% endif %}
             </div>
-        </div>
-        <div class="entry-header-right">
-            {% call overflow_menu("entry-overflow-actions", "Entry actions") %}
-            <a href="{{ url_for('entry_edit_form', entry_uid=log_entry.entry_uid) }}" class="overflow-menu-item">Edit Entry</a>
-            {% endcall %}
+
+            <div class="entry-header-right logbook-entry-title-actions">
+                {% call overflow_menu("entry-overflow-actions", "Entry actions") %}
+                <a href="{{ url_for('entry_edit_form', entry_uid=log_entry.entry_uid) }}" class="overflow-menu-item">Edit Entry</a>
+                {% endcall %}
+            </div>
         </div>
     </div>
 

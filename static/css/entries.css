@@ -411,6 +411,13 @@
     margin-bottom: 12px;
 }
 
+.logbook-page-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
 .logbook-page-header h1 {
     margin-bottom: 6px;
 }
@@ -420,19 +427,43 @@
     color: var(--muted);
 }
 
+.logbook-archived-toggle-wrap {
+    padding-top: 3px;
+}
+
+.logbook-archived-toggle {
+    display: inline-block;
+    font-size: 0.84rem;
+    color: var(--muted);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.logbook-archived-toggle:hover {
+    color: var(--text);
+    text-decoration: underline;
+    background: rgba(241, 236, 226, 0.9);
+}
+
 .logbook-entry-list {
     margin-bottom: 12px;
 }
 
-.timeline-entry-logbook .logbook-entry-header-left {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 4px;
+.logbook-entry-vendor-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
 }
 
 .logbook-entry-vendor-link {
-    color: var(--text);
+    color: var(--muted);
     font-weight: 600;
+    font-size: 0.84rem;
+    line-height: 1.2;
     text-decoration: none;
 }
 
@@ -440,10 +471,43 @@
     text-decoration: underline;
 }
 
+.logbook-entry-archived-indicator {
+    font-size: 0.72rem;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 1px 6px;
+    line-height: 1.2;
+    background: rgba(243, 239, 231, 0.9);
+}
+
+.logbook-entry-header {
+    display: block;
+}
+
 .logbook-entry-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.logbook-entry-title-main {
     display: flex;
     align-items: center;
     gap: 6px;
+    min-width: 0;
+}
+
+.logbook-entry-title-actions {
+    flex-shrink: 0;
+}
+
+.timeline-entry-logbook .entry-title {
+    font-size: 1.03rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.3;
 }
 
 .entry-body-logbook-preview {
@@ -495,5 +559,14 @@
 
     .entry-vendor-picker-labels {
         justify-content: flex-start;
+    }
+
+    .logbook-page-title-row {
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .logbook-archived-toggle-wrap {
+        padding-top: 0;
     }
 }

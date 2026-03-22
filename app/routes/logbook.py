@@ -14,14 +14,24 @@ PAGE_SIZE = 25
 
 
 @router.get("/logbook")
-def logbook_page(request: Request, page: int = 1):
+def logbook_page(request: Request, page: int = 1, show_archived: int | None = None):
+    query_has_preference = "show_archived" in request.query_params
+    if query_has_preference:
+        include_archived = show_archived == 1
+    else:
+        include_archived = request.cookies.get("show_archived_vendors") == "1"
+
     current_page = max(1, int(page))
-    total_entries = count_logbook_entries()
+    total_entries = count_logbook_entries(include_archived_vendors=include_archived)
     if total_entries > 0:
         total_pages = (total_entries + PAGE_SIZE - 1) // PAGE_SIZE
         current_page = min(current_page, total_pages)
 
-    entries = list_logbook_entries(current_page, page_size=PAGE_SIZE)
+    entries = list_logbook_entries(
+        current_page,
+        page_size=PAGE_SIZE,
+        include_archived_vendors=include_archived,
+    )
 
     entry_ids = [int(entry["id"]) for entry in entries]
 
@@ -36,7 +46,7 @@ def logbook_page(request: Request, page: int = 1):
     has_prev = current_page > 1
     has_next = current_page * PAGE_SIZE < total_entries
 
-    return render_template(
+    response = render_template(
         request,
         "logbook.html",
         {
@@ -50,5 +60,18 @@ def logbook_page(request: Request, page: int = 1):
             "page": current_page,
             "has_prev": has_prev,
             "has_next": has_next,
+            "show_archived": include_archived,
         },
     )
+
+    if query_has_preference:
+        response.set_cookie(
+            key="show_archived_vendors",
+            value="1" if include_archived else "0",
+            max_age=60 * 60 * 24 * 365,
+            path="/",
+            samesite="lax",
+            httponly=True,
+        )
+
+    return response

@@ -16,21 +16,24 @@ def list_entries_for_vendor(vendor_id: int) -> list[sqlite3.Row]:
         ).fetchall()
 
 
-def list_logbook_entries(page: int, page_size: int = 25) -> list[sqlite3.Row]:
+def list_logbook_entries(page: int, page_size: int = 25, include_archived_vendors: bool = False) -> list[sqlite3.Row]:
     safe_page = max(1, int(page))
     safe_page_size = max(1, int(page_size))
     offset = (safe_page - 1) * safe_page_size
 
     with get_connection() as conn:
+        where_clause = "" if include_archived_vendors else "WHERE v.vendor_archived_at IS NULL"
         return conn.execute(
-            """
+            f"""
             SELECT
                 e.*,
                 v.vendor_uid,
                 v.vendor_name,
+                v.vendor_archived_at,
                 COALESCE(e.entry_interaction_at, e.entry_created_at) AS entry_timeline_at
             FROM entries e
             JOIN vendors v ON v.id = e.vendor_id
+            {where_clause}
             ORDER BY COALESCE(e.entry_interaction_at, e.entry_created_at) DESC, e.id DESC
             LIMIT ? OFFSET ?
             """,
@@ -38,9 +41,17 @@ def list_logbook_entries(page: int, page_size: int = 25) -> list[sqlite3.Row]:
         ).fetchall()
 
 
-def count_logbook_entries() -> int:
+def count_logbook_entries(include_archived_vendors: bool = False) -> int:
     with get_connection() as conn:
-        row = conn.execute("SELECT COUNT(*) AS total FROM entries").fetchone()
+        where_clause = "" if include_archived_vendors else "WHERE v.vendor_archived_at IS NULL"
+        row = conn.execute(
+            f"""
+            SELECT COUNT(*) AS total
+            FROM entries e
+            JOIN vendors v ON v.id = e.vendor_id
+            {where_clause}
+            """
+        ).fetchone()
         return int(row["total"]) if row else 0
 
 

@@ -5,8 +5,19 @@
 {% block content %}
 <section class="logbook-page" aria-labelledby="logbook-title">
     <header class="logbook-page-header">
-        <h1 id="logbook-title">Logbook</h1>
-        <p class="logbook-page-subtitle">Recent service interactions across all vendors.</p>
+        <div class="logbook-page-title-row">
+            <div>
+                <h1 id="logbook-title">Logbook</h1>
+                <p class="logbook-page-subtitle">Recent service interactions across all vendors.</p>
+            </div>
+            <div class="logbook-archived-toggle-wrap">
+                {% if show_archived %}
+                <a href="{{ url_for('logbook_page') }}?show_archived=0" class="logbook-archived-toggle">Hide Archived</a>
+                {% else %}
+                <a href="{{ url_for('logbook_page') }}?show_archived=1" class="logbook-archived-toggle">Show Archived</a>
+                {% endif %}
+            </div>
+        </div>
     </header>
 
     {% if entries %}
@@ -21,7 +32,7 @@
 
     <nav class="logbook-pagination" aria-label="Logbook pagination">
         {% if has_prev %}
-        <a class="btn btn-secondary" href="{{ url_for('logbook_page') }}?page={{ page - 1 }}">Previous</a>
+        <a class="btn btn-secondary" href="{{ url_for('logbook_page') }}?page={{ page - 1 }}{% if show_archived %}&show_archived=1{% endif %}">Previous</a>
         {% else %}
         <span class="btn btn-secondary is-disabled" aria-disabled="true">Previous</span>
         {% endif %}
@@ -29,7 +40,7 @@
         <span class="logbook-page-index">Page {{ page }}</span>
 
         {% if has_next %}
-        <a class="btn btn-secondary" href="{{ url_for('logbook_page') }}?page={{ page + 1 }}">Next</a>
+        <a class="btn btn-secondary" href="{{ url_for('logbook_page') }}?page={{ page + 1 }}{% if show_archived %}&show_archived=1{% endif %}">Next</a>
         {% else %}
         <span class="btn btn-secondary is-disabled" aria-disabled="true">Next</span>
         {% endif %}
