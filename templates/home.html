@@ -5,16 +5,16 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Home - Home Services Logbook</title>
-	<link rel="icon" type="image/png" href="/static/favicon.png">
-	<link rel="stylesheet" href="/static/css/base.css">
-	<link rel="stylesheet" href="/static/css/layout.css">
-	<link rel="stylesheet" href="/static/css/components.css">
-	<link rel="stylesheet" href="/static/css/forms.css">
-	<link rel="stylesheet" href="/static/css/home.css">
-	<link rel="stylesheet" href="/static/css/entries.css">
+	<link rel="icon" type="image/png" href="{{ url_for('static', path='favicon.png') }}">
+	<link rel="stylesheet" href="{{ url_for('static', path='css/base.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', path='css/layout.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', path='css/components.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', path='css/forms.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', path='css/home.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', path='css/entries.css') }}">
 </head>
 
-<body class="app-shell">
+<body class="app-shell" data-root-path="{{ request.scope.root_path or '' }}">
 	<header class="app-header">
 		<div class="app-nav" aria-hidden="true"></div>
 		{% include "partials/actor_control.html" %}
@@ -36,7 +36,7 @@
 		{% endif %}
 
 		<nav class="home-launcher" aria-label="Main Navigation">
-			<a class="home-tile" href="/entries/new">
+			<a class="home-tile" href="{{ url_for('entry_vendor_picker') }}">
 				<span class="home-tile-icon" aria-hidden="true">📝</span>
 				<span class="home-tile-text">
 					<span class="home-tile-title">New Entry</span>
@@ -52,7 +52,7 @@
 				</span>
 			</a>
 
-			<a class="home-tile" href="/vendors">
+			<a class="home-tile" href="{{ url_for('vendor_list') }}">
 				<span class="home-tile-icon" aria-hidden="true">🏢</span>
 				<span class="home-tile-text">
 					<span class="home-tile-title">Vendors</span>
@@ -62,7 +62,7 @@
 
 			<div class="home-tile-spacer" aria-hidden="true"></div>
 
-			<a class="home-tile" href="/labels">
+			<a class="home-tile" href="{{ url_for('labels_list') }}">
 				<span class="home-tile-icon" aria-hidden="true">🏷️</span>
 				<span class="home-tile-text">
 					<span class="home-tile-title">Label Management</span>
@@ -70,7 +70,7 @@
 						entries.</span>
 				</span>
 			</a>
-			<a class="home-tile" href="/settings">
+			<a class="home-tile" href="{{ url_for('settings_form') }}">
 				<span class="home-tile-icon" aria-hidden="true">⚙️</span>
 				<span class="home-tile-text">
 					<span class="home-tile-title">Settings</span>
@@ -91,10 +91,10 @@
 		{% endif %}
 	</main>
 
-	<script src="/static/js/external_links.js"></script>
-	<script src="/static/js/time.js"></script>
+	<script src="{{ url_for('static', path='js/external_links.js') }}"></script>
+	<script src="{{ url_for('static', path='js/time.js') }}"></script>
 	{% if current_actor.actor_id == "devUser" %}
-	<script src="/static/js/smokeTester.js?v=20260319a"></script>
+	<script src="{{ url_for('static', path='js/smokeTester.js') }}?v=20260319a"></script>
 	{% endif %}
 </body>
 

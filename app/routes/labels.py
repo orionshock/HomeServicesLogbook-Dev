@@ -9,7 +9,7 @@ from app.db import (
     search_labels_by_name,
     update_label_by_uid,
 )
-from app.routes import render_template
+from app.routes import path_for, render_template
 from app.utils import is_valid_hex_color, make_uid, normalize_label_name, utc_now_iso
 
 router = APIRouter()
@@ -36,7 +36,7 @@ def labels_list(request: Request):
         "label_admin.html",
         {
             "breadcrumbs": [
-                {"label": "Home", "url": "/"},
+                {"label": "Home", "url": path_for(request, "read_root")},
                 {"label": "Label Management", "url": None},
             ],
             "labels": list_labels(),

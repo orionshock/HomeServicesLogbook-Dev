@@ -4,28 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Home Services Logbook{% endblock %}</title>
-    <link rel="icon" type="image/png" href="/static/favicon.png">
-    <link rel="stylesheet" href="/static/css/base.css">
-    <link rel="stylesheet" href="/static/css/layout.css">
-    <link rel="stylesheet" href="/static/css/components.css">
-    <link rel="stylesheet" href="/static/css/forms.css">
-    <link rel="stylesheet" href="/static/css/vendors.css">
-    <link rel="stylesheet" href="/static/css/entries.css">
-    <link rel="stylesheet" href="/static/css/labels.css">
+    <link rel="icon" type="image/png" href="{{ url_for('static', path='favicon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/forms.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/vendors.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/entries.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/labels.css') }}">
 </head>
-<body class="app-shell">
+<body class="app-shell" data-root-path="{{ request.scope.root_path or '' }}">
     <header class="app-header">
         <nav class="app-nav" aria-label="Main Navigation">
             <div class="app-nav-group">
-                <a class="app-nav-link" href="/">Home</a>
-                <a class="app-nav-link" href="/entries/new">New Entry</a>
+                <a class="app-nav-link" href="{{ url_for('read_root') }}">Home</a>
+                <a class="app-nav-link" href="{{ url_for('entry_vendor_picker') }}">New Entry</a>
                 <a class="app-nav-link is-disabled" href="#" aria-disabled="true" tabindex="-1">Logbook</a>
-                <a class="app-nav-link" href="/vendors">Vendors</a>
+                <a class="app-nav-link" href="{{ url_for('vendor_list') }}">Vendors</a>
             </div>
             <span class="app-nav-divider" aria-hidden="true"></span>
             <div class="app-nav-group app-nav-group-secondary">
-                <a class="app-nav-link" href="/labels">Label Management</a>
-                <a class="app-nav-link" href="/settings">Settings</a>
+                <a class="app-nav-link" href="{{ url_for('labels_list') }}">Label Management</a>
+                <a class="app-nav-link" href="{{ url_for('settings_form') }}">Settings</a>
             </div>
         </nav>
         {% include "partials/actor_control.html" %}
@@ -51,8 +51,8 @@
         {% endif %}
         {% block content %}{% endblock %}
     </main>
-        <script src="/static/js/external_links.js"></script>
-        <script src="/static/js/time.js"></script>
+        <script src="{{ url_for('static', path='js/external_links.js') }}"></script>
+        <script src="{{ url_for('static', path='js/time.js') }}"></script>
         {% block scripts %}{% endblock %}
 </body>
 </html>

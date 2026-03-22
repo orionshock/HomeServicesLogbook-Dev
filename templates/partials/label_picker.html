@@ -1,4 +1,4 @@
-<div class="form-field label-picker" data-label-picker data-field-name-label-uids="{{ field_name_label_uids | default('label_uids') }}" data-field-name-new-label-names="{{ field_name_new_label_names | default('new_label_names') }}">
+<div class="form-field label-picker" data-label-picker data-field-name-label-uids="{{ field_name_label_uids | default('label_uids') }}" data-field-name-new-label-names="{{ field_name_new_label_names | default('new_label_names') }}" data-suggest-url="{{ url_for('labels_suggest') }}">
     <label>{{ field_label }}</label>
 
     <div class="label-picker-selected" data-label-picker-selected>

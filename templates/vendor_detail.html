@@ -9,7 +9,7 @@
 
     <div class="vendor-header-actions-row">
         {% if not vendor.vendor_archived_at %}
-        <a href="/vendor/{{ vendor.vendor_uid }}/entries/new" class="btn btn-primary">New Entry</a>
+        <a href="{{ url_for('vendor_entry_new_form', vendor_uid=vendor.vendor_uid) }}" class="btn btn-primary">New Entry</a>
         {% endif %}
     </div>
 

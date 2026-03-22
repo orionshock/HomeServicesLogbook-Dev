@@ -22,6 +22,7 @@
     if (!form || !fileInput) {
         return;
     }
+    var calendarExportUrl = form.dataset.calendarExportUrl || "/calendar/export";
 
     function syncHistorySidebarHeight() {
         if (!entryFormPrimary || !entryHistorySidebar) {
@@ -209,7 +210,7 @@
     function submitCalendarDownload(title, dateValue, timeValue, description) {
         var postForm = document.createElement("form");
         postForm.method = "post";
-        postForm.action = "/calendar/export";
+        postForm.action = calendarExportUrl;
         postForm.target = "_blank";
 
         function addField(name, value) {

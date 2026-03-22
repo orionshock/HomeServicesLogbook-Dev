@@ -72,17 +72,17 @@
 
     {% if show_actions %}
     {% call overflow_menu("vendor-overflow-actions", "Vendor actions") %}
-    <a href="/vendor/{{ vendor.vendor_uid }}/edit" class="overflow-menu-item">Edit Vendor</a>
+    <a href="{{ url_for('vendor_edit_form', vendor_uid=vendor.vendor_uid) }}" class="overflow-menu-item">Edit Vendor</a>
     {% if not vendor.vendor_archived_at %}
-    <form method="post" action="/vendor/{{ vendor.vendor_uid }}/archive" class="overflow-form">
+    <form method="post" action="{{ url_for('vendor_archive', vendor_uid=vendor.vendor_uid) }}" class="overflow-form">
         <button type="submit" class="overflow-menu-item overflow-menu-item-danger">Archive Vendor</button>
     </form>
     {% else %}
-    <form method="post" action="/vendor/{{ vendor.vendor_uid }}/unarchive" class="overflow-form">
+    <form method="post" action="{{ url_for('vendor_unarchive', vendor_uid=vendor.vendor_uid) }}" class="overflow-form">
         <button type="submit" class="overflow-menu-item">Unarchive Vendor</button>
     </form>
     {% endif %}
     {% endcall %}
     {% endif %}
 </section>
-<script src="/static/js/vendor_header_card.js"></script>
+<script src="{{ url_for('static', path='js/vendor_header_card.js') }}"></script>

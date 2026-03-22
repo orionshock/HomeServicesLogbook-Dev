@@ -2,7 +2,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
 from app.db import get_settings, update_settings
-from app.routes import render_template
+from app.routes import path_for, render_template
 
 router = APIRouter()
 
@@ -14,7 +14,7 @@ def settings_form(request: Request):
         "settings.html",
         {
             "breadcrumbs": [
-                {"label": "Home", "url": "/"},
+                {"label": "Home", "url": path_for(request, "read_root")},
                 {"label": "Settings", "url": None},
             ],
             "settings": get_settings(),
@@ -36,4 +36,4 @@ def settings_submit(
         location_description=location_description.strip(),
         updated_by=actor,
     )
-    return RedirectResponse(url="/", status_code=303)
+    return RedirectResponse(url=path_for(request, "read_root"), status_code=303)

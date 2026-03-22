@@ -3,14 +3,14 @@
         <summary class="actor-menu-summary">User: <span id="current-actor-display" data-current-actor-display>{{ current_actor.display_name }}</span></summary>
         <div class="actor-menu-panel" role="menu" aria-label="Current user controls">
             <button type="button" class="actor-menu-action" data-open-actor-dialog>Change Session User</button>
-            <form method="post" action="/actor/reset" data-actor-reset-form {% if current_actor.source != "override" %}hidden{% endif %}>
+            <form method="post" action="{{ url_for('reset_actor_override') }}" data-actor-reset-form {% if current_actor.source != "override" %}hidden{% endif %}>
                 <button type="submit" class="actor-menu-action actor-menu-action-reset">Reset Session User</button>
             </form>
         </div>
     </details>
 
     <dialog class="actor-dialog" data-actor-dialog>
-        <form method="post" action="/actor/set" class="actor-dialog-form" data-actor-set-form>
+        <form method="post" action="{{ url_for('set_actor_override') }}" class="actor-dialog-form" data-actor-set-form>
             <h2 class="actor-dialog-title">Change Session User</h2>
             <div class="form-field">
                 <label for="actor-id-input" class="actor-dialog-label">User name</label>
@@ -21,7 +21,7 @@
             <p class="actor-dialog-error" data-actor-error hidden></p>
             <div class="actor-dialog-actions">
                 {% if current_actor.source == "override" %}
-                <form method="post" action="/actor/reset" style="border: none; padding: 0; margin: 0;" data-actor-reset-inline>
+                <form method="post" action="{{ url_for('reset_actor_override') }}" style="border: none; padding: 0; margin: 0;" data-actor-reset-inline>
                     <button type="submit" class="btn btn-secondary">Reset Session User</button>
                 </form>
                 {% endif %}
@@ -33,4 +33,4 @@
 
     </dialog>
 </div>
-<script src="/static/js/actor_control.js"></script>
+<script src="{{ url_for('static', path='js/actor_control.js') }}"></script>

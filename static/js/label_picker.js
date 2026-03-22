@@ -79,6 +79,7 @@
 
         const existingFieldName = picker.dataset.fieldNameLabelUids || "label_uids";
         const newFieldName = picker.dataset.fieldNameNewLabelNames || "new_label_names";
+        const suggestUrl = picker.dataset.suggestUrl || "";
         const state = createPickerState();
 
         function syncInitialState() {
@@ -206,9 +207,16 @@
         }
 
         async function fetchSuggestions(query) {
+            if (!suggestUrl) {
+                clearSuggestions();
+                return;
+            }
+
             const token = ++state.requestToken;
             try {
-                const response = await fetch(`/api/labels/suggest?q=${encodeURIComponent(query)}`, {
+                const requestUrl = new URL(suggestUrl, window.location.origin);
+                requestUrl.searchParams.set("q", query);
+                const response = await fetch(requestUrl.toString(), {
                     credentials: "same-origin",
                 });
                 if (!response.ok) {

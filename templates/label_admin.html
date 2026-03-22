@@ -8,7 +8,14 @@
     <button type="button" class="btn btn-secondary" data-label-new-trigger>+ New Label</button>
 </div>
 
-<section class="content-section">
+<section
+    class="content-section"
+    data-label-admin
+    data-label-create-url="{{ url_for('label_create_inline') }}"
+    data-label-rename-url-template="{{ url_for('label_rename_inline', label_uid='__LABEL_UID__') }}"
+    data-label-color-url-template="{{ url_for('label_color_inline', label_uid='__LABEL_UID__') }}"
+    data-label-delete-url-template="{{ url_for('label_delete_inline', label_uid='__LABEL_UID__') }}"
+>
     <div class="label-create-row" data-label-create-row hidden>
         <div class="label-management-row">
             <div class="label-management-color-column">
@@ -66,5 +73,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/label_admin.js"></script>
+<script src="{{ url_for('static', path='js/label_admin.js') }}"></script>
 {% endblock %}

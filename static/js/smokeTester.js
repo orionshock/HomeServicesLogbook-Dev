@@ -2,6 +2,15 @@
   "use strict";
 
   const MIN_ACTION_PAUSE_MS = 150;
+  const appRootPath = String(document.body && document.body.dataset.rootPath || "").replace(/\/$/, "");
+
+  function appUrl(path) {
+    if (!path || path === "/") {
+      return appRootPath || "/";
+    }
+
+    return `${appRootPath}${path.startsWith("/") ? path : `/${path}`}`;
+  }
 
   // Dev-only route exerciser / sample data loader.
   // Uses the app's real form POST endpoints so it exercises request parsing,
@@ -238,7 +247,7 @@
   }
 
   async function findLabelByExactName(name) {
-    const response = await fetch(`/api/labels/suggest?q=${encodeURIComponent(name)}`, {
+    const response = await fetch(appUrl(`/api/labels/suggest?q=${encodeURIComponent(name)}`), {
       method: "GET",
       credentials: "same-origin",
     });
@@ -257,7 +266,7 @@
   }
 
   async function createLabel(name, color) {
-    const response = await fetch("/labels/new", {
+    const response = await fetch(appUrl("/labels/new"), {
       method: "POST",
       credentials: "same-origin",
       headers: {
@@ -511,7 +520,7 @@
       index,
       Array.from(labelUids),
     );
-    const response = await postForm("/vendors/new", payload);
+    const response = await postForm(appUrl("/vendors/new"), payload);
     const vendorUid = extractVendorUid(response.url);
     return { ...vendorDef, vendorUid, seedLabelUids: Array.from(labelUids) };
   }
@@ -537,12 +546,12 @@
       entryIndex,
       Array.from(entryLabelUids),
     );
-    await postForm(`/vendor/${encodeURIComponent(vendor.vendorUid)}/entries`, payload);
+    await postForm(appUrl(`/vendor/${encodeURIComponent(vendor.vendorUid)}/entries`), payload);
     return Array.from(entryLabelUids);
   }
 
   async function archiveVendor(vendor) {
-    await postForm(`/vendor/${encodeURIComponent(vendor.vendorUid)}/archive`, new URLSearchParams());
+    await postForm(appUrl(`/vendor/${encodeURIComponent(vendor.vendorUid)}/archive`), new URLSearchParams());
   }
 
   function buildSettingsPayload() {
@@ -564,13 +573,13 @@
 
   async function exerciseSettingsRoutes(reportProgress) {
     logProgress(reportProgress, "Settings check: loading /settings form...");
-    await getPage("/settings");
+    await getPage(appUrl("/settings"));
 
     const payload = buildSettingsPayload();
     logProgress(reportProgress, `Settings check: saving location \"${payload.location_name}\"...`);
-    await postForm("/settings", new URLSearchParams(payload));
+    await postForm(appUrl("/settings"), new URLSearchParams(payload));
     logProgress(reportProgress, "Settings check: loading / to confirm updated home render...");
-    await getPage("/");
+    await getPage(appUrl("/"));
 
     logProgress(reportProgress, `Settings check complete: ${payload.location_name}`);
 
@@ -579,7 +588,7 @@
 
   async function exerciseLabelManagementRoutes(reportProgress) {
     logProgress(reportProgress, "Label route check: loading /labels...");
-    await getPage("/labels");
+    await getPage(appUrl("/labels"));
 
     const baseName = `Smoke Label ${randomDigits(6)}`;
     const renamedName = `${baseName} Renamed`;
@@ -587,7 +596,7 @@
     const created = await createLabel(baseName, "#1d4ed8");
 
     logProgress(reportProgress, `Label route check: renaming to \"${renamedName}\"...`);
-    const renamePayload = await postJson(`/labels/${encodeURIComponent(created.label_uid)}/rename`, {
+    const renamePayload = await postJson(appUrl(`/labels/${encodeURIComponent(created.label_uid)}/rename`), {
       name: renamedName,
     });
     if (!renamePayload.ok || toNameKey(renamePayload.name) !== toNameKey(renamedName)) {
@@ -595,7 +604,7 @@
     }
 
     logProgress(reportProgress, `Label route check: updating color for ${created.label_uid}...`);
-    const colorPayload = await postJson(`/labels/${encodeURIComponent(created.label_uid)}/color`, {
+    const colorPayload = await postJson(appUrl(`/labels/${encodeURIComponent(created.label_uid)}/color`), {
       color: "#0f766e",
     });
     if (!colorPayload.ok || String(colorPayload.color || "").toLowerCase() !== "#0f766e") {
@@ -609,7 +618,7 @@
     }
 
     logProgress(reportProgress, `Label route check: deleting ${created.label_uid}...`);
-    const deletePayload = await postJson(`/labels/${encodeURIComponent(created.label_uid)}/delete`, {});
+    const deletePayload = await postJson(appUrl(`/labels/${encodeURIComponent(created.label_uid)}/delete`), {});
     if (!deletePayload.ok) {
       throw new Error(`Label delete verification failed for ${created.label_uid}`);
     }

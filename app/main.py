@@ -2,14 +2,16 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 
-from app.routes import _resolve_current_actor, render_template, router as actor_router
+from app.actor import resolve_current_actor, router as actor_router
+from app.routes import render_template
 from app.routes.entries import router as entries_router
 from app.routes.home import lifespan, router as home_router
 from app.routes.labels import router as labels_router
 from app.routes.settings import router as settings_router
 from app.routes.vendors import router as vendors_router
+from app.runtime import APP_ROOT_PATH
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, root_path=APP_ROOT_PATH)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
@@ -74,7 +76,7 @@ async def generic_exception_handler(request: Request, _exc: Exception):
 
 @app.middleware("http")
 async def actor_context_middleware(request: Request, call_next):
-    request.state.current_actor = _resolve_current_actor(request)
+    request.state.current_actor = resolve_current_actor(request)
     return await call_next(request)
 
 

@@ -9,7 +9,7 @@
         <ol class="vendor-group-list">
             {% for vendor in section.vendors %}
             <li class="vendor-item" data-vendor-item data-name="{{ vendor.vendor_name }}" data-search="{{ vendor.search_text }}">
-                <a href="/vendor/{{ vendor.vendor_uid }}">{{ vendor.vendor_name }}</a>
+                <a href="{{ url_for('vendor_detail', vendor_uid=vendor.vendor_uid) }}">{{ vendor.vendor_name }}</a>
                 {% if vendor.vendor_archived_at %}<span class="archived-badge">Archived</span>{% endif %}
             </li>
             {% endfor %}
@@ -24,7 +24,7 @@
 {% block content %}
 <h1>Vendors</h1>
 <div class="vendors-actions-row">
-    <a href="/vendors/new" class="btn btn-primary">Add Vendor</a>
+    <a href="{{ url_for('vendor_new_form') }}" class="btn btn-primary">Add Vendor</a>
     {% if vendors %}
     <div class="vendor-view-mode-row" role="group" aria-label="Vendor list view mode">
         <span class="vendor-view-mode-label">View:</span>
@@ -34,9 +34,9 @@
     {% endif %}
     <div>
         {% if show_archived %}
-        <a href="/vendors?show_archived=0" class="btn btn-danger">Hide Archived</a>
+        <a href="{{ url_for('vendor_list') }}?show_archived=0" class="btn btn-danger">Hide Archived</a>
         {% else %}
-        <a href="/vendors?show_archived=1" class="btn btn-secondary">Show Archived</a>
+        <a href="{{ url_for('vendor_list') }}?show_archived=1" class="btn btn-secondary">Show Archived</a>
         {% endif %}
     </div>
 </div>
@@ -60,5 +60,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/vendors.js"></script>
+<script src="{{ url_for('static', path='js/vendors.js') }}"></script>
 {% endblock %}

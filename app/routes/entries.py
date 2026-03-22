@@ -25,7 +25,7 @@ from app.db import (
     resolve_submitted_labels,
     update_entry_by_uid,
 )
-from app.routes import BASE_DIR, MAX_UPLOAD_BYTES, render_template
+from app.routes import BASE_DIR, MAX_UPLOAD_BYTES, path_for, render_template
 from app.utils import (
     make_uid,
     normalize_label_name,
@@ -320,17 +320,17 @@ def _render_entry_form(
     if mode == "edit":
         entry_crumb_label = entry["entry_title"] if entry and entry.get("entry_title") else current_entry_uid
         breadcrumbs = [
-            {"label": "Home", "url": "/"},
-            {"label": "Vendors", "url": "/vendors"},
-            {"label": vendor["vendor_name"], "url": f"/vendor/{vendor['vendor_uid']}"},
+            {"label": "Home", "url": path_for(request, "read_root")},
+            {"label": "Vendors", "url": path_for(request, "vendor_list")},
+            {"label": vendor["vendor_name"], "url": path_for(request, "vendor_detail", vendor_uid=vendor["vendor_uid"])},
             {"label": f"Edit Entry - {entry_crumb_label}", "url": None},
         ]
         entry_attachments = list_attachments_for_entry_id(entry["id"])
     else:
         breadcrumbs = [
-            {"label": "Home", "url": "/"},
-            {"label": "Vendors", "url": "/vendors"},
-            {"label": vendor["vendor_name"], "url": f"/vendor/{vendor['vendor_uid']}"},
+            {"label": "Home", "url": path_for(request, "read_root")},
+            {"label": "Vendors", "url": path_for(request, "vendor_list")},
+            {"label": vendor["vendor_name"], "url": path_for(request, "vendor_detail", vendor_uid=vendor["vendor_uid"])},
             {"label": "New Entry", "url": None},
         ]
         entry_attachments = []
@@ -374,7 +374,7 @@ def entry_vendor_picker(request: Request):
         "entry_vendor_picker.html",
         {
             "breadcrumbs": [
-                {"label": "Home", "url": "/"},
+                {"label": "Home", "url": path_for(request, "read_root")},
                 {"label": "New Entry", "url": None},
             ],
             "vendors": vendor_rows,
@@ -400,7 +400,7 @@ def vendor_entry_new_form(request: Request, vendor_uid: str):
         vendor=vendor,
         entry=None,
         selected_labels=[],
-        form_action=f"/vendor/{vendor_uid}/entries",
+        form_action=path_for(request, "create_vendor_entry", vendor_uid=vendor_uid),
         submit_label="Save Entry",
     )
 
@@ -442,7 +442,7 @@ def entry_edit_form(request: Request, entry_uid: str):
         entry=dict(entry),
         selected_labels=list_labels_for_entry_id(entry["id"]),
         current_entry_uid=entry_uid,
-        form_action=f"/entry/{entry_uid}/edit",
+        form_action=path_for(request, "entry_edit_submit", entry_uid=entry_uid),
         submit_label="Save Entry Changes",
     )
 
@@ -509,7 +509,7 @@ def entry_edit_submit(
             selected_labels=selected_labels,
             submitted_new_label_names=normalized_new_label_names,
             current_entry_uid=entry_uid,
-            form_action=f"/entry/{entry_uid}/edit",
+            form_action=path_for(request, "entry_edit_submit", entry_uid=entry_uid),
             submit_label="Save Entry Changes",
             remove_attachment_uids_selected=selected_remove_attachment_uids,
             errors=errors,
@@ -536,7 +536,7 @@ def entry_edit_submit(
             selected_labels=selected_labels,
             submitted_new_label_names=normalized_new_label_names,
             current_entry_uid=entry_uid,
-            form_action=f"/entry/{entry_uid}/edit",
+            form_action=path_for(request, "entry_edit_submit", entry_uid=entry_uid),
             submit_label="Save Entry Changes",
             remove_attachment_uids_selected=selected_remove_attachment_uids,
             form_error=str(exc),
@@ -558,7 +558,7 @@ def entry_edit_submit(
 
     _store_uploaded_attachments(new_attachments, entry_id=entry["id"], actor=actor)
 
-    return RedirectResponse(url=f"/vendor/{entry['vendor_uid']}", status_code=303)
+    return RedirectResponse(url=path_for(request, "vendor_detail", vendor_uid=entry["vendor_uid"]), status_code=303)
 
 
 @router.post("/vendor/{vendor_uid}/entries")
@@ -625,7 +625,7 @@ def create_vendor_entry(
         new_attachments,
         has_submitted_label_values,
     ]):
-        return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
+        return RedirectResponse(url=path_for(request, "vendor_detail", vendor_uid=vendor_uid), status_code=303)
 
     if errors:
         return _render_entry_form(
@@ -635,7 +635,7 @@ def create_vendor_entry(
             entry=submitted_entry,
             selected_labels=selected_labels,
             submitted_new_label_names=normalized_new_label_names,
-            form_action=f"/vendor/{vendor_uid}/entries",
+            form_action=path_for(request, "create_vendor_entry", vendor_uid=vendor_uid),
             submit_label="Save Entry",
             errors=errors,
             status_code=400,
@@ -661,7 +661,7 @@ def create_vendor_entry(
             entry=submitted_entry,
             selected_labels=selected_labels,
             submitted_new_label_names=normalized_new_label_names,
-            form_action=f"/vendor/{vendor_uid}/entries",
+            form_action=path_for(request, "create_vendor_entry", vendor_uid=vendor_uid),
             submit_label="Save Entry",
             form_error=str(exc),
             status_code=400,
@@ -677,7 +677,7 @@ def create_vendor_entry(
 
     _store_uploaded_attachments(new_attachments, entry_id=entry_id, actor=actor)
 
-    return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
+    return RedirectResponse(url=path_for(request, "vendor_detail", vendor_uid=vendor_uid), status_code=303)
 
 
 @router.post("/calendar/export")

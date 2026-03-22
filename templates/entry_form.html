@@ -17,7 +17,7 @@
         <section class="content-section entry-form-primary">
             <h2>{{ page_title }}</h2>
 
-            <form id="entry-form" method="post" action="{{ form_action }}" enctype="multipart/form-data" autocomplete="off" data-unsaved-warning="true">
+            <form id="entry-form" method="post" action="{{ form_action }}" enctype="multipart/form-data" autocomplete="off" data-unsaved-warning="true" data-calendar-export-url="{{ url_for('calendar_export_ics') }}">
                 {% if form_error %}
                 <div class="form-error-summary" role="alert">{{ form_error }}</div>
                 {% endif %}
@@ -68,7 +68,7 @@
                                 <input type="checkbox" name="remove_attachment_uids" value="{{ attachment.attachment_uid }}" {% if remove_attachment_uids_selected and attachment.attachment_uid in remove_attachment_uids_selected %}checked{% endif %}>
                                 Remove
                             </label>
-                            <a href="/attachments/{{ attachment.attachment_uid }}">{{ attachment.attachment_original_filename }}</a>
+                            <a href="{{ url_for('attachment_download', attachment_uid=attachment.attachment_uid) }}">{{ attachment.attachment_original_filename }}</a>
                         </li>
                         {% endfor %}
                     </ul>
@@ -89,7 +89,7 @@
 
                 <div class="entry-actions-row">
                     <div class="entry-actions-left">
-                        <a href="/vendor/{{ vendor.vendor_uid }}" class="btn btn-secondary">Cancel</a>
+                        <a href="{{ url_for('vendor_detail', vendor_uid=vendor.vendor_uid) }}" class="btn btn-secondary">Cancel</a>
                     </div>
                     <div class="entry-actions-right-group">
                         <button type="button" id="calendar-trigger" class="btn btn-secondary">Add Calendar Event</button>
@@ -150,7 +150,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/unsaved_changes.js"></script>
-<script src="/static/js/entry_form.js"></script>
-<script src="/static/js/label_picker.js"></script>
+<script src="{{ url_for('static', path='js/unsaved_changes.js') }}"></script>
+<script src="{{ url_for('static', path='js/entry_form.js') }}"></script>
+<script src="{{ url_for('static', path='js/label_picker.js') }}"></script>
 {% endblock %}

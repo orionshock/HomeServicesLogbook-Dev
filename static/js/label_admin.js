@@ -1,10 +1,27 @@
 (function () {
+    var adminRoot = document.querySelector("[data-label-admin]");
     var list = document.querySelector(".label-management-list");
     var emptyState = document.querySelector("[data-label-empty-state]");
     var createRowEl = document.querySelector("[data-label-create-row]");
     var newTrigger = document.querySelector("[data-label-new-trigger]");
 
+    if (!adminRoot) {
+        return;
+    }
+
+    var createUrl = adminRoot.dataset.labelCreateUrl || "";
+    var renameUrlTemplate = adminRoot.dataset.labelRenameUrlTemplate || "";
+    var colorUrlTemplate = adminRoot.dataset.labelColorUrlTemplate || "";
+    var deleteUrlTemplate = adminRoot.dataset.labelDeleteUrlTemplate || "";
+
     // --- shared helpers -------------------------------------------------
+
+    function buildLabelUrl(template, labelUid) {
+        if (!template) {
+            return "";
+        }
+        return template.replace("__LABEL_UID__", encodeURIComponent(labelUid));
+    }
 
     function updateEmptyState() {
         if (!list || !emptyState) {
@@ -135,7 +152,7 @@
             refreshBusyState();
 
             try {
-                var response = await fetch("/labels/" + encodeURIComponent(labelUid) + "/rename", {
+                var response = await fetch(buildLabelUrl(renameUrlTemplate, labelUid), {
                     method: "POST",
                     credentials: "same-origin",
                     headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -171,7 +188,7 @@
             refreshBusyState();
 
             try {
-                var response = await fetch("/labels/" + encodeURIComponent(labelUid) + "/color", {
+                var response = await fetch(buildLabelUrl(colorUrlTemplate, labelUid), {
                     method: "POST",
                     credentials: "same-origin",
                     headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -205,7 +222,7 @@
             refreshBusyState();
 
             try {
-                var response = await fetch("/labels/" + encodeURIComponent(labelUid) + "/delete", {
+                var response = await fetch(buildLabelUrl(deleteUrlTemplate, labelUid), {
                     method: "POST",
                     credentials: "same-origin",
                     headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -346,7 +363,7 @@
             setBusy(true);
 
             try {
-                var response = await fetch("/labels/new", {
+                var response = await fetch(createUrl, {
                     method: "POST",
                     credentials: "same-origin",
                     headers: { "Content-Type": "application/json", "Accept": "application/json" },

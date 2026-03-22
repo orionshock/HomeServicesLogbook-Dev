@@ -13,9 +13,9 @@
 
 <p>
     {% if is_edit %}
-    <a href="/vendor/{{ vendor.vendor_uid }}">Back to Vendor</a> |
+    <a href="{{ url_for('vendor_detail', vendor_uid=vendor.vendor_uid) }}">Back to Vendor</a> |
     {% endif %}
-    <a href="/vendors">Back to Vendors</a>
+    <a href="{{ url_for('vendor_list') }}">Back to Vendors</a>
 </p>
 
 <section class="content-section">
@@ -66,9 +66,9 @@
         <div class="entry-actions">
             <button type="submit" class="btn btn-primary">{{ submit_label }}</button>
             {% if is_edit %}
-            <a href="/vendor/{{ vendor.vendor_uid }}" class="btn btn-secondary">Cancel</a>
+            <a href="{{ url_for('vendor_detail', vendor_uid=vendor.vendor_uid) }}" class="btn btn-secondary">Cancel</a>
             {% else %}
-            <a href="/vendors" class="btn btn-secondary">Cancel</a>
+            <a href="{{ url_for('vendor_list') }}" class="btn btn-secondary">Cancel</a>
             {% endif %}
         </div>
     </form>
@@ -76,6 +76,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/unsaved_changes.js"></script>
-<script src="/static/js/label_picker.js"></script>
+<script src="{{ url_for('static', path='js/unsaved_changes.js') }}"></script>
+<script src="{{ url_for('static', path='js/label_picker.js') }}"></script>
 {% endblock %}

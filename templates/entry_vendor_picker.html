@@ -19,14 +19,14 @@
             autofocus
         >
         <p class="entry-vendor-picker-add-link">
-            <a href="/vendors/new">Can't find it? Add a vendor.</a>
+            <a href="{{ url_for('vendor_new_form') }}">Can't find it? Add a vendor.</a>
         </p>
     </div>
 
     <ul class="entry-vendor-picker-list" data-entry-picker-list>
         {% for vendor in vendors %}
         <li data-entry-picker-row data-search="{{ vendor.search_text }}">
-            <a class="entry-vendor-picker-row" href="/vendor/{{ vendor.vendor_uid }}/entries/new">
+            <a class="entry-vendor-picker-row" href="{{ url_for('vendor_entry_new_form', vendor_uid=vendor.vendor_uid) }}">
                 <span class="entry-vendor-picker-name">{{ vendor.vendor_name }}</span>
                 {% if vendor.labels %}
                 <span class="label-chip-list entry-vendor-picker-labels" aria-label="Vendor labels">
@@ -45,11 +45,11 @@
 
     <div class="entry-vendor-picker-empty{% if vendors %} is-hidden{% endif %}" data-entry-picker-empty>
         <p>No vendors found.</p>
-        <p><a href="/vendors/new">Add a new vendor</a></p>
+        <p><a href="{{ url_for('vendor_new_form') }}">Add a new vendor</a></p>
     </div>
 </section>
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/entry_vendor_picker.js"></script>
+    <script src="{{ url_for('static', path='js/entry_vendor_picker.js') }}"></script>
 {% endblock %}

@@ -20,7 +20,7 @@ from app.db import (
     unarchive_vendor_by_uid,
     update_vendor_by_uid,
 )
-from app.routes import render_template
+from app.routes import path_for, render_template
 from app.utils import make_uid, normalize_required_text, utc_now_iso
 
 router = APIRouter()
@@ -204,11 +204,11 @@ def _render_vendor_form(
 ):
     page_title = "Edit" if is_edit else "New Vendor"
     breadcrumbs = [
-        {"label": "Home", "url": "/"},
-        {"label": "Vendors", "url": "/vendors"},
+        {"label": "Home", "url": path_for(request, "read_root")},
+        {"label": "Vendors", "url": path_for(request, "vendor_list")},
     ]
     if is_edit and vendor is not None:
-        breadcrumbs.append({"label": vendor["vendor_name"], "url": f"/vendor/{vendor['vendor_uid']}"})
+        breadcrumbs.append({"label": vendor["vendor_name"], "url": path_for(request, "vendor_detail", vendor_uid=vendor["vendor_uid"])})
     breadcrumbs.append({"label": page_title, "url": None})
 
     response = render_template(
@@ -237,7 +237,7 @@ def vendor_new_form(request: Request):
     return _render_vendor_form(
         request,
         is_edit=False,
-        form_action="/vendors/new",
+        form_action=path_for(request, "vendor_new_submit"),
         submit_label="Save Vendor",
         vendor=None,
         selected_labels=[],
@@ -291,7 +291,7 @@ def vendor_new_submit(
         return _render_vendor_form(
             request,
             is_edit=False,
-            form_action="/vendors/new",
+            form_action=path_for(request, "vendor_new_submit"),
             submit_label="Save Vendor",
             vendor=submitted_vendor,
             selected_labels=selected_labels,
@@ -320,7 +320,7 @@ def vendor_new_submit(
         return _render_vendor_form(
             request,
             is_edit=False,
-            form_action="/vendors/new",
+            form_action=path_for(request, "vendor_new_submit"),
             submit_label="Save Vendor",
             vendor=submitted_vendor,
             selected_labels=selected_labels,
@@ -341,7 +341,7 @@ def vendor_new_submit(
     )
     replace_vendor_labels(created_vendor["id"], resolved_label_ids)
 
-    return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
+    return RedirectResponse(url=path_for(request, "vendor_detail", vendor_uid=vendor_uid), status_code=303)
 
 
 @router.get("/vendors")
@@ -359,7 +359,7 @@ def vendor_list(request: Request, show_archived: int | None = None):
         "vendor_listing.html",
         {
             "breadcrumbs": [
-                {"label": "Home", "url": "/"},
+                {"label": "Home", "url": path_for(request, "read_root")},
                 {"label": "Vendors", "url": None},
             ],
             "vendors": listing_rows,
@@ -389,7 +389,7 @@ def vendor_archive(request: Request, vendor_uid: str):
     found = archive_vendor_by_uid(vendor_uid, vendor_archived_at=now, vendor_updated_by=actor)
     if not found:
         raise HTTPException(status_code=404, detail="Vendor not found")
-    return RedirectResponse(url="/vendors", status_code=303)
+    return RedirectResponse(url=path_for(request, "vendor_list"), status_code=303)
 
 
 @router.post("/vendor/{vendor_uid}/unarchive")
@@ -399,7 +399,7 @@ def vendor_unarchive(request: Request, vendor_uid: str):
     found = unarchive_vendor_by_uid(vendor_uid, vendor_updated_at=now, vendor_updated_by=actor)
     if not found:
         raise HTTPException(status_code=404, detail="Vendor not found")
-    return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
+    return RedirectResponse(url=path_for(request, "vendor_detail", vendor_uid=vendor_uid), status_code=303)
 
 
 @router.get("/vendor/{vendor_uid}")
@@ -422,8 +422,8 @@ def vendor_detail(request: Request, vendor_uid: str):
         "vendor_detail.html",
         {
             "breadcrumbs": [
-                {"label": "Home", "url": "/"},
-                {"label": "Vendors", "url": "/vendors"},
+                {"label": "Home", "url": path_for(request, "read_root")},
+                {"label": "Vendors", "url": path_for(request, "vendor_list")},
                 {"label": vendor["vendor_name"], "url": None},
             ],
             "vendor": vendor,
@@ -444,7 +444,7 @@ def vendor_edit_form(request: Request, vendor_uid: str):
     return _render_vendor_form(
         request,
         is_edit=True,
-        form_action=f"/vendor/{vendor_uid}/edit",
+        form_action=path_for(request, "vendor_edit_submit", vendor_uid=vendor_uid),
         submit_label="Save Changes",
         vendor=dict(vendor),
         selected_labels=list_labels_for_vendor_id(vendor["id"]),
@@ -504,7 +504,7 @@ def vendor_edit_submit(
         return _render_vendor_form(
             request,
             is_edit=True,
-            form_action=f"/vendor/{vendor_uid}/edit",
+            form_action=path_for(request, "vendor_edit_submit", vendor_uid=vendor_uid),
             submit_label="Save Changes",
             vendor=submitted_vendor,
             selected_labels=selected_labels,
@@ -532,7 +532,7 @@ def vendor_edit_submit(
         return _render_vendor_form(
             request,
             is_edit=True,
-            form_action=f"/vendor/{vendor_uid}/edit",
+            form_action=path_for(request, "vendor_edit_submit", vendor_uid=vendor_uid),
             submit_label="Save Changes",
             vendor=submitted_vendor,
             selected_labels=selected_labels,
@@ -549,4 +549,4 @@ def vendor_edit_submit(
     )
     replace_vendor_labels(vendor["id"], resolved_label_ids)
 
-    return RedirectResponse(url=f"/vendor/{vendor_uid}", status_code=303)
+    return RedirectResponse(url=path_for(request, "vendor_detail", vendor_uid=vendor_uid), status_code=303)
