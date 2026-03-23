@@ -1,10 +1,8 @@
 import sqlite3
-from pathlib import Path
-
-DB_PATH = Path(__file__).parent.parent.parent / "data" / "logbook.db"
+from app.runtime import APP_DB_PATH
 
 
 def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(APP_DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn

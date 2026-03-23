@@ -4,7 +4,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.routes import path_for
-from app.runtime import TRUST_UPSTREAM_AUTH, UPSTREAM_ACTOR_HEADER
+from app.runtime import APP_COOKIE_PATH, TRUST_UPSTREAM_AUTH, UPSTREAM_ACTOR_HEADER
 
 ACTOR_OVERRIDE_COOKIE = "actor_override"
 
@@ -99,7 +99,7 @@ async def set_actor_override(request: Request, actor_id: str = Form("")):
             response.set_cookie(
                 ACTOR_OVERRIDE_COOKIE,
                 normalized_actor,
-                path="/",
+                path=APP_COOKIE_PATH,
                 httponly=True,
                 samesite="lax",
             )
@@ -112,7 +112,7 @@ async def set_actor_override(request: Request, actor_id: str = Form("")):
         response.set_cookie(
             ACTOR_OVERRIDE_COOKIE,
             normalized_actor,
-            path="/",
+            path=APP_COOKIE_PATH,
             httponly=True,
             samesite="lax",
         )
@@ -125,9 +125,9 @@ async def reset_actor_override(request: Request):
     if _is_async_request(request):
         actor = resolve_actor_with_override(request, None)
         response = JSONResponse(_actor_json_payload(actor))
-        response.delete_cookie(ACTOR_OVERRIDE_COOKIE, path="/")
+        response.delete_cookie(ACTOR_OVERRIDE_COOKIE, path=APP_COOKIE_PATH)
         return response
 
     response = RedirectResponse(url=_redirect_target(request), status_code=303)
-    response.delete_cookie(ACTOR_OVERRIDE_COOKIE, path="/")
+    response.delete_cookie(ACTOR_OVERRIDE_COOKIE, path=APP_COOKIE_PATH)
     return response

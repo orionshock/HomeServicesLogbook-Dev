@@ -7,6 +7,7 @@ from app.db import (
     list_logbook_entries,
 )
 from app.routes import path_for, render_template
+from app.runtime import APP_COOKIE_PATH
 
 router = APIRouter()
 
@@ -70,7 +71,7 @@ def logbook_page(request: Request, page: int = 1, show_archived: int | None = No
             key="show_archived_vendors",
             value="1" if include_archived else "0",
             max_age=60 * 60 * 24 * 365,
-            path="/",
+            path=APP_COOKIE_PATH,
             samesite="lax",
             httponly=True,
         )

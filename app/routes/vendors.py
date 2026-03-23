@@ -21,6 +21,7 @@ from app.db import (
     update_vendor_by_uid,
 )
 from app.routes import path_for, render_template
+from app.runtime import APP_COOKIE_PATH
 from app.utils import make_uid, normalize_required_text, utc_now_iso
 
 router = APIRouter()
@@ -374,7 +375,7 @@ def vendor_list(request: Request, show_archived: int | None = None):
             key="show_archived_vendors",
             value="1" if include_archived else "0",
             max_age=60 * 60 * 24 * 365,
-            path="/",
+            path=APP_COOKIE_PATH,
             samesite="lax",
             httponly=True,
         )

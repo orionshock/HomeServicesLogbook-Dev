@@ -26,7 +26,8 @@ from app.db import (
     resolve_submitted_labels,
     update_entry_by_uid,
 )
-from app.routes import BASE_DIR, MAX_UPLOAD_BYTES, path_for, render_template
+from app.routes import MAX_UPLOAD_BYTES, path_for, render_template
+from app.runtime import APP_UPLOADS_DIR
 from app.utils import (
     make_uid,
     normalize_label_name,
@@ -137,12 +138,21 @@ def get_submitted_attachments(attachments: list[UploadFile] | None) -> list[Uplo
     return [upload for upload in attachments if upload and upload.filename]
 
 
-def delete_attachment_file(base_dir: Path, attachment_relative_path: str) -> None:
+def _resolve_attachment_disk_path(attachment_relative_path: str) -> Path | None:
     rel_path = Path(attachment_relative_path)
-    abs_path = (base_dir / rel_path).resolve()
-    uploads_root = (base_dir / "uploads").resolve()
+    candidates = [APP_UPLOADS_DIR / rel_path]
 
-    if uploads_root not in abs_path.parents:
+    for candidate in candidates:
+        abs_path = candidate.resolve()
+        if abs_path == APP_UPLOADS_DIR or APP_UPLOADS_DIR in abs_path.parents:
+            return abs_path
+
+    return None
+
+
+def delete_attachment_file(attachment_relative_path: str) -> None:
+    abs_path = _resolve_attachment_disk_path(attachment_relative_path)
+    if abs_path is None:
         return
 
     if abs_path.exists() and abs_path.is_file():
@@ -213,8 +223,8 @@ def _store_uploaded_attachment(
     validate_attachment_upload(upload, MAX_UPLOAD_BYTES)
 
     now = datetime.now(timezone.utc)
-    relative_dir = Path("uploads") / now.strftime("%Y") / now.strftime("%m")
-    absolute_dir = BASE_DIR / relative_dir
+    relative_dir = Path(now.strftime("%Y")) / now.strftime("%m")
+    absolute_dir = APP_UPLOADS_DIR / relative_dir
     absolute_dir.mkdir(parents=True, exist_ok=True)
 
     attachment_original_filename = sanitize_original_filename(upload.filename or "")
@@ -225,6 +235,7 @@ def _store_uploaded_attachment(
         )
 
     attachment_stored_filename = make_stored_filename(attachment_original_filename)
+    # Store path relative to APP_UPLOADS_DIR.
     attachment_relative_path = relative_dir / attachment_stored_filename
     disk_path = absolute_dir / attachment_stored_filename
 
@@ -431,11 +442,8 @@ def attachment_download(attachment_uid: str):
     if attachment is None:
         raise HTTPException(status_code=404, detail="Attachment not found")
 
-    rel_path = Path(attachment["attachment_relative_path"])
-    abs_path = (BASE_DIR / rel_path).resolve()
-    uploads_root = (BASE_DIR / "uploads").resolve()
-
-    if uploads_root not in abs_path.parents or not abs_path.is_file():
+    abs_path = _resolve_attachment_disk_path(str(attachment["attachment_relative_path"]))
+    if abs_path is None or not abs_path.is_file():
         raise HTTPException(status_code=404, detail="Attachment file not found")
 
     return FileResponse(
@@ -582,7 +590,7 @@ def entry_edit_submit(
     for attachment_uid in set(remove_attachment_uids or []):
         deleted_attachment = delete_attachment_by_uid_for_entry(entry["id"], attachment_uid)
         if deleted_attachment is not None:
-            delete_attachment_file(BASE_DIR, deleted_attachment["attachment_relative_path"])
+            delete_attachment_file(str(deleted_attachment["attachment_relative_path"]))
 
     _store_uploaded_attachments(new_attachments, entry_id=entry["id"], actor=actor)
 
