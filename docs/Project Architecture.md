@@ -22,13 +22,13 @@ Browser Request
   -> FastAPI app (app/main.py)
     -> Route module (app/routes/*.py)
       -> DB helper module (app/db/*.py)
-        -> SQLite (data/logbook.db)
+        -> SQLite (APP_DB_PATH, default data/logbook.db)
       -> Jinja template render (templates/*.html)
   -> HTML response
 ```
 
 For uploads:
-- Files are written to uploads/YYYY/MM.
+- Files are written to APP_UPLOADS_DIR/YYYY/MM (default: data/uploads/YYYY/MM).
 - SQLite stores attachment metadata and relative file path.
 
 ---
@@ -40,7 +40,7 @@ HomeServicesLogbook-Dev/
 |-- app/
 |   |-- actor.py (actor resolution logic + actor override routes)
 |   |-- main.py (FastAPI app setup, middleware, exception handlers, router registration)
-|   |-- runtime.py (environment-driven runtime config values)
+|   |-- runtime.py (environment-driven runtime config values and path resolution)
 |   |-- utils.py (shared helpers for timestamps, IDs, and validation)
 |   |-- db/
 |   |   |-- connection.py (SQLite connection factory with Row mapping)
@@ -56,6 +56,7 @@ HomeServicesLogbook-Dev/
 |       |-- home.py (home route and app lifespan initialization)
 |       |-- vendors.py (vendor listing, create/edit, archive/unarchive routes)
 |       |-- entries.py (entry create/edit routes, upload handling, ICS export)
+|       |-- logbook.py (global chronological logbook route + pagination)
 |       |-- labels.py (label admin page + JSON label management API routes)
 |       `-- settings.py (settings form GET/POST routes)
 |-- templates/
@@ -65,6 +66,7 @@ HomeServicesLogbook-Dev/
 |   |-- vendor_form.html (vendor create/edit form)
 |   |-- vendor_detail.html (vendor profile and timeline landing page)
 |   |-- entry_form.html (entry create/edit workflow page)
+|   |-- logbook.html (global paginated logbook timeline view)
 |   |-- label_admin.html (label management page)
 |   |-- settings.html (location metadata settings form)
 |   |-- 404.html (not-found error view)
@@ -72,6 +74,7 @@ HomeServicesLogbook-Dev/
 |   `-- partials/
 |       |-- vendor_header_card.html (shared vendor summary/header card)
 |       |-- log_entry_card.html (shared timeline entry card rendering)
+|       |-- logbook_entry_card.html (shared logbook page entry card rendering)
 |       |-- label_picker.html (shared label picker UI fragment)
 |       `-- actor_control.html (shared actor override control used in headers)
 |-- static/
@@ -97,8 +100,8 @@ HomeServicesLogbook-Dev/
 |       |-- unsaved_changes.js (form dirty state detection, navigation warnings)
 |       `-- smokeTester.js (dev-only smoke test and sample data route exerciser)
 |-- data/
-|   `-- logbook.db (SQLite database file for app data)
-|-- uploads/ (stored uploaded files organized by date folders)
+|   |-- logbook.db (SQLite database file for app data; default APP_DB_PATH)
+|   `-- uploads/ (stored uploaded files organized by date folders; default APP_UPLOADS_DIR)
 |-- docs/
 |   |-- Project Architecture.md (system layout, routes, and composition reference)
 |   |-- Database Schema.md (SQLite table/index and lifecycle reference)
@@ -127,6 +130,7 @@ Responsibilities:
   - actor
   - vendors
   - entries
+  - logbook
   - labels
   - settings
 
@@ -155,6 +159,10 @@ Environment normalization helpers and runtime constants:
 - TRUST_UPSTREAM_AUTH
 - UPSTREAM_ACTOR_HEADER
 - APP_ROOT_PATH
+- APP_DATA_DIR
+- APP_UPLOADS_DIR
+- APP_DB_PATH
+- APP_COOKIE_PATH
 
 ## Environment Configuration
 
@@ -173,6 +181,25 @@ Actor resolution behavior is controlled by these environment variables:
   - Default: empty (mounted at site root)
   - Normalized to a leading slash with no trailing slash.
   - Used as FastAPI root_path and by path_for when generating links.
+
+- APP_DATA_DIR
+  - Default: data (repo-local path)
+  - Can be absolute or relative; relative paths resolve from repo root.
+  - Ensured to exist at startup.
+
+- APP_UPLOADS_DIR
+  - Default: data/uploads
+  - Can be absolute or relative; relative paths resolve from repo root.
+  - Ensured to exist at startup.
+
+- APP_DB_PATH
+  - Default: data/logbook.db
+  - Can be absolute or relative; relative paths resolve from repo root.
+  - Parent directory is ensured to exist at startup.
+
+- APP_COOKIE_PATH
+  - Derived from APP_ROOT_PATH.
+  - Used to scope actor/show-archived cookies for subpath deployments.
 
 ## app/db/
 
@@ -212,6 +239,10 @@ Actor resolution behavior is controlled by these environment variables:
 - POST /vendor/{vendor_uid}/edit -> Update vendor + replace vendor labels
 - POST /vendor/{vendor_uid}/archive -> Archive vendor
 - POST /vendor/{vendor_uid}/unarchive -> Unarchive vendor
+
+## Logbook
+
+- GET /logbook -> Global chronological timeline with pagination and archived-vendor toggle
 
 ## Entries + Attachments + ICS
 
@@ -259,7 +290,7 @@ Behavior model:
 - First app startup initializes schema through lifespan -> init_db().
 - Settings singleton row (id = 1) is inserted during init when missing.
 - settings access helpers also self-heal the singleton row when absent.
-- Development schema changes are applied by recreating data/logbook.db.
+- Development schema changes are applied by recreating APP_DB_PATH (default data/logbook.db).
 - Upload size cap is 10 MB per file.
-- Attachment path checks prevent file access outside uploads/.
+- Attachment path checks prevent file access outside APP_UPLOADS_DIR.
 - Entry creation intentionally no-ops (redirects without insert) when all entry fields, labels, and attachments are blank.

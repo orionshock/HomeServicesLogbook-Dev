@@ -31,7 +31,7 @@ Labels are optional organizational metadata that can be attached to both vendors
 
 - Schema is initialized at startup by app/db/schema.py:init_db.
 - During initialization, the singleton settings row is inserted with id = 1 when missing.
-- Development workflow applies schema changes by recreating data/logbook.db.
+- Development workflow applies schema changes by recreating the SQLite file at APP_DB_PATH (default: data/logbook.db).
 - Migration/backfill logic is intentionally not included in init_db.
 
 ---
@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS attachments (
 
 Notes:
 - attachment_relative_path is stored with forward slashes.
-- Files are persisted under uploads/YYYY/MM/.
+- Files are persisted under APP_UPLOADS_DIR/YYYY/MM/ (default: data/uploads/YYYY/MM/).
 
 ## labels
 
