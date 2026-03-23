@@ -6,10 +6,25 @@
 <section class="logbook-page" aria-labelledby="logbook-title">
     <header class="logbook-page-header">
         <div class="logbook-page-title-row">
-            <div>
-                <h1 id="logbook-title">Logbook</h1>
-                <p class="logbook-page-subtitle">Recent service interactions across all vendors.</p>
-            </div>
+            <h1 id="logbook-title">Logbook</h1>
+            <p class="logbook-page-subtitle">Recent service interactions across all vendors.</p>
+        </div>
+
+        <div class="logbook-controls-row">
+            <form method="get" action="{{ url_for('logbook_page') }}" class="logbook-search-form">
+                <label for="logbook-search-input">Search</label>
+                <input
+                    id="logbook-search-input"
+                    type="text"
+                    name="q"
+                    value="{{ q }}"
+                    placeholder="Search logbook"
+                >
+                {% if show_archived %}
+                <input type="hidden" name="show_archived" value="1">
+                {% endif %}
+                <button type="submit" class="btn btn-primary">Search</button>
+            </form>
             <div class="logbook-archived-toggle-wrap">
                 {% if show_archived %}
                 <a href="{{ url_for('logbook_page') }}?show_archived=0{% if q %}&q={{ q|urlencode }}{% endif %}" class="btn btn-danger">📦 Hide Archived</a>
@@ -18,21 +33,6 @@
                 {% endif %}
             </div>
         </div>
-
-        <form method="get" action="{{ url_for('logbook_page') }}" class="logbook-search-form">
-            <label for="logbook-search-input">Search</label>
-            <input
-                id="logbook-search-input"
-                type="text"
-                name="q"
-                value="{{ q }}"
-                placeholder="Search logbook"
-            >
-            {% if show_archived %}
-            <input type="hidden" name="show_archived" value="1">
-            {% endif %}
-            <button type="submit" class="btn btn-primary">Search</button>
-        </form>
     </header>
 
     {% if entries %}
