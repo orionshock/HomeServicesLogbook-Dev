@@ -1,11 +1,7 @@
 import sqlite3
 
 from .connection import get_connection
-
-
-def _normalize_logbook_search_text(search_text: str | None) -> str | None:
-    normalized = (search_text or "").strip()
-    return normalized or None
+from app.utils import normalize_optional_text
 
 
 def _build_logbook_where_clause(
@@ -18,7 +14,7 @@ def _build_logbook_where_clause(
     if not include_archived_vendors:
         clauses.append("v.vendor_archived_at IS NULL")
 
-    normalized_search_text = _normalize_logbook_search_text(search_text)
+    normalized_search_text = normalize_optional_text(search_text)
     if normalized_search_text:
         like_value = f"%{normalized_search_text}%"
         clauses.append(

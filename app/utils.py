@@ -6,9 +6,18 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def normalize_label_name(value: str) -> str | None:
-    normalized = re.sub(r"\s+", " ", (value or "").strip())
+def normalize_optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
     return normalized or None
+
+
+def normalize_label_name(value: str | None) -> str | None:
+    normalized = normalize_optional_text(value)
+    if normalized is None:
+        return None
+    return re.sub(r"\s+", " ", normalized)
 
 
 def is_valid_hex_color(value: str | None) -> bool:

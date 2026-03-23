@@ -31,6 +31,7 @@ from app.runtime import APP_UPLOADS_DIR
 from app.utils import (
     make_uid,
     normalize_label_name,
+    normalize_optional_text,
     normalize_required_text,
     utc_now_iso,
 )
@@ -281,11 +282,6 @@ def _store_uploaded_attachment(
 def _store_uploaded_attachments(attachments: list[UploadFile], entry_id: int, actor: str) -> None:
     for upload in attachments:
         _store_uploaded_attachment(upload, entry_id=entry_id, actor=actor)
-
-
-def _normalize_optional_text(value: str) -> str | None:
-    normalized = (value or "").strip()
-    return normalized or None
 
 
 def _select_labels_for_form(
@@ -555,10 +551,10 @@ def entry_edit_submit(
     try:
         update_entry_by_uid(
             entry_uid=entry_uid,
-            entry_title=_normalize_optional_text(entry_title),
+            entry_title=normalize_optional_text(entry_title),
             entry_interaction_at=clean_entry_interaction_at,
-            entry_body_text=_normalize_optional_text(entry_body_text),
-            entry_rep_name=_normalize_optional_text(entry_rep_name),
+            entry_body_text=normalize_optional_text(entry_body_text),
+            entry_rep_name=normalize_optional_text(entry_rep_name),
             entry_updated_at=now,
             entry_updated_by=actor,
         )
@@ -683,10 +679,10 @@ def create_vendor_entry(
         entry_id = create_entry(
             entry_uid=make_uid("entry"),
             vendor_id=vendor["id"],
-            entry_title=_normalize_optional_text(entry_title),
+            entry_title=normalize_optional_text(entry_title),
             entry_interaction_at=clean_entry_interaction_at,
-            entry_body_text=_normalize_optional_text(entry_body_text),
-            entry_rep_name=_normalize_optional_text(entry_rep_name),
+            entry_body_text=normalize_optional_text(entry_body_text),
+            entry_rep_name=normalize_optional_text(entry_rep_name),
             entry_created_by=actor,
             entry_created_at=now,
         )

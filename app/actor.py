@@ -5,17 +5,11 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.routes import path_for
 from app.runtime import APP_COOKIE_PATH, TRUST_UPSTREAM_AUTH, UPSTREAM_ACTOR_HEADER
+from app.utils import normalize_optional_text
 
 ACTOR_OVERRIDE_COOKIE = "actor_override"
 
 router = APIRouter()
-
-
-def _normalize_actor_value(value: str | None) -> str | None:
-    if value is None:
-        return None
-    normalized = value.strip()
-    return normalized or None
 
 
 def _read_upstream_actor(request: Request) -> str | None:
@@ -25,11 +19,11 @@ def _read_upstream_actor(request: Request) -> str | None:
     if not UPSTREAM_ACTOR_HEADER:
         return None
 
-    return _normalize_actor_value(request.headers.get(UPSTREAM_ACTOR_HEADER))
+    return normalize_optional_text(request.headers.get(UPSTREAM_ACTOR_HEADER))
 
 
 def resolve_current_actor(request: Request) -> dict[str, str | None]:
-    override_actor = _normalize_actor_value(request.cookies.get(ACTOR_OVERRIDE_COOKIE))
+    override_actor = normalize_optional_text(request.cookies.get(ACTOR_OVERRIDE_COOKIE))
     return resolve_actor_with_override(request, override_actor)
 
 
@@ -85,7 +79,7 @@ def _redirect_target(request: Request) -> str:
 
 @router.post("/actor/set")
 async def set_actor_override(request: Request, actor_id: str = Form("")):
-    normalized_actor = _normalize_actor_value(actor_id)
+    normalized_actor = normalize_optional_text(actor_id)
 
     if _is_async_request(request):
         if normalized_actor:

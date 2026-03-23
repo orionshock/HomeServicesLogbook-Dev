@@ -22,7 +22,7 @@ from app.db import (
 )
 from app.routes import path_for, render_template
 from app.runtime import APP_COOKIE_PATH
-from app.utils import make_uid, normalize_required_text, utc_now_iso
+from app.utils import make_uid, normalize_optional_text, normalize_required_text, utc_now_iso
 
 router = APIRouter()
 
@@ -49,11 +49,6 @@ def normalize_portal_url(value: str) -> str | None:
         raise ValueError("Portal URL must include a valid host")
 
     return normalized
-
-
-def _normalize_optional_text(value: str) -> str | None:
-    normalized = (value or "").strip()
-    return normalized or None
 
 
 def _vendor_name_sort_key(vendor: dict) -> str:
@@ -307,12 +302,12 @@ def vendor_new_submit(
         create_vendor(
             vendor_uid=vendor_uid,
             vendor_name=clean_vendor_name,
-            vendor_account_number=_normalize_optional_text(vendor_account_number),
+            vendor_account_number=normalize_optional_text(vendor_account_number),
             vendor_portal_url=clean_vendor_portal_url,
-            vendor_portal_username=_normalize_optional_text(vendor_portal_username),
-            vendor_phone_number=_normalize_optional_text(vendor_phone_number),
-            vendor_address=_normalize_optional_text(vendor_address),
-            vendor_notes=_normalize_optional_text(vendor_notes),
+            vendor_portal_username=normalize_optional_text(vendor_portal_username),
+            vendor_phone_number=normalize_optional_text(vendor_phone_number),
+            vendor_address=normalize_optional_text(vendor_address),
+            vendor_notes=normalize_optional_text(vendor_notes),
             vendor_created_at=now,
             vendor_created_by=actor,
         )
@@ -519,12 +514,12 @@ def vendor_edit_submit(
         update_vendor_by_uid(
             vendor_uid=vendor_uid,
             vendor_name=clean_vendor_name,
-            vendor_account_number=_normalize_optional_text(vendor_account_number),
+            vendor_account_number=normalize_optional_text(vendor_account_number),
             vendor_portal_url=clean_vendor_portal_url,
-            vendor_portal_username=_normalize_optional_text(vendor_portal_username),
-            vendor_phone_number=_normalize_optional_text(vendor_phone_number),
-            vendor_address=_normalize_optional_text(vendor_address),
-            vendor_notes=_normalize_optional_text(vendor_notes),
+            vendor_portal_username=normalize_optional_text(vendor_portal_username),
+            vendor_phone_number=normalize_optional_text(vendor_phone_number),
+            vendor_address=normalize_optional_text(vendor_address),
+            vendor_notes=normalize_optional_text(vendor_notes),
             vendor_updated_at=now,
             vendor_updated_by=actor,
         )
