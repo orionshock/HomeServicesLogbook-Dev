@@ -8,9 +8,10 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, Response, Upl
 from fastapi.responses import FileResponse, RedirectResponse
 
 from app.db import (
-    create_attachment,
     create_entry,
     delete_attachment_by_uid_for_entry,
+    delete_attachment_file,
+    delete_entry_by_uid,
     get_attachment_by_uid,
     get_entry_by_uid,
     get_vendor_by_uid,
@@ -23,11 +24,12 @@ from app.db import (
     list_labels_for_vendor_ids,
     list_vendors,
     replace_entry_labels,
+    resolve_attachment_disk_path,
     resolve_submitted_labels,
+    store_attachment_uploads,
     update_entry_by_uid,
 )
 from app.routes import MAX_UPLOAD_BYTES, path_for, render_template
-from app.runtime import APP_UPLOADS_DIR
 from app.utils import (
     make_uid,
     normalize_label_name,
@@ -107,22 +109,6 @@ def normalize_entry_interaction_at_utc(entry_interaction_at_utc: str) -> str | N
     return parsed_dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def make_stored_filename(original_name: str) -> str:
-    ext = Path(original_name or "").suffix.lower()
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    short = uuid.uuid4().hex[:6]
-    return f"{stamp}-{short}{ext}"
-
-
-def sanitize_original_filename(filename: str) -> str:
-    basename = Path(filename or "").name
-    sanitized = re.sub(r"\s+", "_", basename)
-    sanitized = re.sub(r"[^A-Za-z0-9._-]", "_", sanitized)
-    sanitized = re.sub(r"_+", "_", sanitized)
-    sanitized = sanitized.strip("._")
-    return (sanitized or "uploaded-file")[:255]
-
-
 def validate_attachment_upload(upload: UploadFile, max_upload_bytes: int) -> None:
     raw_name = Path(upload.filename or "").name
     if not Path(raw_name).suffix:
@@ -137,27 +123,6 @@ def get_submitted_attachments(attachments: list[UploadFile] | None) -> list[Uplo
     if not attachments:
         return []
     return [upload for upload in attachments if upload and upload.filename]
-
-
-def _resolve_attachment_disk_path(attachment_relative_path: str) -> Path | None:
-    rel_path = Path(attachment_relative_path)
-    candidates = [APP_UPLOADS_DIR / rel_path]
-
-    for candidate in candidates:
-        abs_path = candidate.resolve()
-        if abs_path == APP_UPLOADS_DIR or APP_UPLOADS_DIR in abs_path.parents:
-            return abs_path
-
-    return None
-
-
-def delete_attachment_file(attachment_relative_path: str) -> None:
-    abs_path = _resolve_attachment_disk_path(attachment_relative_path)
-    if abs_path is None:
-        return
-
-    if abs_path.exists() and abs_path.is_file():
-        abs_path.unlink()
 
 
 def _escape_ics_text(value: str) -> str:
@@ -214,74 +179,6 @@ def build_ics_content(title: str, event_date: str, event_time: str, description:
 def slugify_for_filename(value: str, fallback: str = "calendar-event") -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", (value or "").lower()).strip("-")
     return slug[:40] or fallback
-
-
-def _store_uploaded_attachment(
-    upload: UploadFile,
-    entry_id: int,
-    actor: str,
-) -> None:
-    validate_attachment_upload(upload, MAX_UPLOAD_BYTES)
-
-    now = datetime.now(timezone.utc)
-    relative_dir = Path(now.strftime("%Y")) / now.strftime("%m")
-    absolute_dir = APP_UPLOADS_DIR / relative_dir
-    absolute_dir.mkdir(parents=True, exist_ok=True)
-
-    attachment_original_filename = sanitize_original_filename(upload.filename or "")
-    if not Path(attachment_original_filename).suffix:
-        raise HTTPException(
-            status_code=400,
-            detail="Attachment filename must include an extension",
-        )
-
-    attachment_stored_filename = make_stored_filename(attachment_original_filename)
-    # Store path relative to APP_UPLOADS_DIR.
-    attachment_relative_path = relative_dir / attachment_stored_filename
-    disk_path = absolute_dir / attachment_stored_filename
-
-    bytes_written = 0
-    chunk_size = 1024 * 1024
-    try:
-        with disk_path.open("wb") as out:
-            while True:
-                chunk = upload.file.read(chunk_size)
-                if not chunk:
-                    break
-                bytes_written += len(chunk)
-                if bytes_written > MAX_UPLOAD_BYTES:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Attachment exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)} MB size limit",
-                    )
-                out.write(chunk)
-    except HTTPException:
-        if disk_path.exists():
-            disk_path.unlink()
-        raise
-    except Exception:
-        if disk_path.exists():
-            disk_path.unlink()
-        raise
-    finally:
-        upload.file.close()
-
-    create_attachment(
-        attachment_uid=make_uid("attachment"),
-        entry_id=entry_id,
-        attachment_original_filename=attachment_original_filename,
-        attachment_stored_filename=attachment_stored_filename,
-        attachment_relative_path=str(attachment_relative_path).replace("\\", "/"),
-        attachment_mime_type=upload.content_type,
-        attachment_file_size=bytes_written,
-        attachment_created_by=actor,
-        attachment_created_at=utc_now_iso(),
-    )
-
-
-def _store_uploaded_attachments(attachments: list[UploadFile], entry_id: int, actor: str) -> None:
-    for upload in attachments:
-        _store_uploaded_attachment(upload, entry_id=entry_id, actor=actor)
 
 
 def _select_labels_for_form(
@@ -438,7 +335,7 @@ def attachment_download(attachment_uid: str):
     if attachment is None:
         raise HTTPException(status_code=404, detail="Attachment not found")
 
-    abs_path = _resolve_attachment_disk_path(str(attachment["attachment_relative_path"]))
+    abs_path = resolve_attachment_disk_path(str(attachment["attachment_relative_path"]))
     if abs_path is None or not abs_path.is_file():
         raise HTTPException(status_code=404, detail="Attachment file not found")
 
@@ -588,9 +485,30 @@ def entry_edit_submit(
         if deleted_attachment is not None:
             delete_attachment_file(str(deleted_attachment["attachment_relative_path"]))
 
-    _store_uploaded_attachments(new_attachments, entry_id=entry["id"], actor=actor)
+    try:
+        store_attachment_uploads(new_attachments, entry_id=entry["id"], actor=actor, max_upload_bytes=MAX_UPLOAD_BYTES)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     redirect_target = return_next or path_for(request, "vendor_detail", vendor_uid=entry["vendor_uid"])
+    return RedirectResponse(url=redirect_target, status_code=303)
+
+
+@router.post("/entry/{entry_uid}/delete")
+def entry_delete(request: Request, entry_uid: str, next: str | None = None):
+    return_next = _safe_internal_return_target(next)
+
+    try:
+        vendor_uid = delete_entry_by_uid(entry_uid)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if vendor_uid is None:
+        raise HTTPException(status_code=404, detail="Entry not found")
+
+    redirect_target = return_next or path_for(request, "vendor_detail", vendor_uid=vendor_uid)
     return RedirectResponse(url=redirect_target, status_code=303)
 
 
@@ -708,7 +626,10 @@ def create_vendor_entry(
     )
     replace_entry_labels(entry_id, resolved_label_ids)
 
-    _store_uploaded_attachments(new_attachments, entry_id=entry_id, actor=actor)
+    try:
+        store_attachment_uploads(new_attachments, entry_id=entry_id, actor=actor, max_upload_bytes=MAX_UPLOAD_BYTES)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return RedirectResponse(url=path_for(request, "vendor_detail", vendor_uid=vendor_uid), status_code=303)
 
