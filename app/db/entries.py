@@ -159,6 +159,65 @@ def create_entry(
             raise ValueError("Entry could not be saved due to invalid data") from exc
 
 
+def create_entry_for_vendor_uid(
+    vendor_uid: str,
+    entry_uid: str,
+    entry_title: str | None,
+    entry_interaction_at: str | None,
+    entry_body_text: str | None,
+    entry_rep_name: str | None,
+    entry_created_by: str,
+    entry_created_at: str,
+    label_uids: list[str],
+    new_label_names: list[str],
+    attachments,
+    max_upload_bytes: int,
+) -> dict[str, str]:
+    """
+    Create an entry for a vendor UID and apply labels/uploads without exposing PKs.
+
+    Returns only route-facing UID data.
+    """
+    from .attachments import store_attachment_uploads
+    from .labels import replace_entry_labels, resolve_submitted_labels
+    from .vendors import get_vendor_by_uid
+
+    vendor = get_vendor_by_uid(vendor_uid)
+    if vendor is None:
+        raise ValueError("Vendor not found")
+
+    entry_id = create_entry(
+        entry_uid=entry_uid,
+        vendor_id=int(vendor["id"]),
+        entry_title=entry_title,
+        entry_interaction_at=entry_interaction_at,
+        entry_body_text=entry_body_text,
+        entry_rep_name=entry_rep_name,
+        entry_created_by=entry_created_by,
+        entry_created_at=entry_created_at,
+    )
+
+    resolved_label_ids = resolve_submitted_labels(
+        label_uids=label_uids,
+        new_label_names=new_label_names,
+        actor=entry_created_by,
+        now=entry_created_at,
+    )
+    replace_entry_labels(entry_id, resolved_label_ids)
+
+    store_attachment_uploads(
+        attachments,
+        entry_id=entry_id,
+        actor=entry_created_by,
+        max_upload_bytes=max_upload_bytes,
+    )
+
+    return {
+        "entry_uid": entry_uid,
+        "vendor_uid": str(vendor["vendor_uid"]),
+    }
+
+
 def update_entry_by_uid(
     entry_uid: str,
     entry_title: str | None,

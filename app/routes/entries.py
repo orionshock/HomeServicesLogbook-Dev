@@ -8,7 +8,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, Response, Upl
 from fastapi.responses import FileResponse, RedirectResponse
 
 from app.db import (
-    create_entry,
+    create_entry_for_vendor_uid,
     delete_attachment_file,
     delete_entry_by_uid,
     delete_entry_attachment_by_uid,
@@ -21,11 +21,9 @@ from app.db import (
     list_labels,
     list_labels_for_vendor_ids,
     list_vendors,
-    replace_entry_labels,
     replace_entry_labels_by_uid,
     resolve_attachment_disk_path,
     resolve_submitted_labels,
-    store_attachment_uploads,
     store_attachment_uploads_for_entry_uid,
     update_entry_by_uid,
 )
@@ -596,16 +594,21 @@ def create_vendor_entry(
         )
 
     now = utc_now_iso()
+    new_entry_uid = make_uid("entry")
     try:
-        entry_id = create_entry(
-            entry_uid=make_uid("entry"),
-            vendor_id=vendor["id"],
+        create_entry_for_vendor_uid(
+            vendor_uid=vendor_uid,
+            entry_uid=new_entry_uid,
             entry_title=normalize_optional_text(entry_title),
             entry_interaction_at=clean_entry_interaction_at,
             entry_body_text=normalize_optional_text(entry_body_text),
             entry_rep_name=normalize_optional_text(entry_rep_name),
             entry_created_by=actor,
             entry_created_at=now,
+            label_uids=label_uids or [],
+            new_label_names=new_label_names or [],
+            attachments=new_attachments,
+            max_upload_bytes=MAX_UPLOAD_BYTES,
         )
     except ValueError as exc:
         return _render_entry_form(
@@ -620,19 +623,6 @@ def create_vendor_entry(
             form_error=str(exc),
             status_code=400,
         )
-
-    resolved_label_ids = resolve_submitted_labels(
-        label_uids=label_uids or [],
-        new_label_names=new_label_names or [],
-        actor=actor,
-        now=now,
-    )
-    replace_entry_labels(entry_id, resolved_label_ids)
-
-    try:
-        store_attachment_uploads(new_attachments, entry_id=entry_id, actor=actor, max_upload_bytes=MAX_UPLOAD_BYTES)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return RedirectResponse(url=path_for(request, "vendor_detail", vendor_uid=vendor_uid), status_code=303)
 
