@@ -226,3 +226,96 @@ def delete_entry_by_uid(entry_uid: str) -> str | None:
         conn.execute("DELETE FROM entries WHERE id = ?", (entry_id,))
 
     return vendor_uid
+
+
+def get_vendor_entry_form_context(
+    vendor_uid: str,
+    entry_uid_to_edit: str | None = None,
+) -> dict:
+    """
+    Get complete context for entry form (new or edit) without exposing PKs to routes.
+    
+    Internally resolves UIDs to PKs and aggregates all necessary data for form rendering.
+    Returns UID-shaped data that routes can consume directly.
+    
+    Args:
+        vendor_uid: UID of the vendor
+        entry_uid_to_edit: Optional UID of entry being edited (none for new entry form)
+    
+    Returns:
+        {
+            "vendor": vendor_row,
+            "entries": [entry_rows],  # all entries for vendor, ordered DESC by created_at
+            "attachments_by_entry": dict[int, list],  # keyed by entry id (for template)
+            "labels_by_entry": dict[int, list],  # keyed by entry id (for template)
+            "vendor_labels": [label_rows],
+            "all_labels": [label_rows],
+            "entry_attachments": [attachment_rows],  # attachments for current entry (if editing)
+        }
+    
+    Raises ValueError if vendor not found.
+    """
+    from .attachments import list_attachments_for_entry_id, list_attachments_for_entry_ids
+    from .labels import (
+        list_labels,
+        list_labels_for_vendor_id,
+        list_labels_for_entry_id,
+        list_labels_for_entry_ids,
+    )
+    from .vendors import get_vendor_by_uid
+
+    vendor = get_vendor_by_uid(vendor_uid)
+    if vendor is None:
+        raise ValueError(f"Vendor not found: {vendor_uid}")
+
+    vendor_id = int(vendor["id"])
+
+    # Get all entries for this vendor
+    entries = list_entries_for_vendor(vendor_id)
+    entry_ids = [int(e["id"]) for e in entries]
+
+    # Build map from entry_id to entry_uid for looking up attachments later
+    entry_id_to_uid = {int(e["id"]): str(e["entry_uid"]) for e in entries}
+
+    # Get all attachments for all entries, organized by entry_id (for template compatibility)
+    attachments_by_entry: dict[int, list] = {}
+    if entry_ids:
+        for attachment in list_attachments_for_entry_ids(entry_ids):
+            entry_id = int(attachment["entry_id"])
+            attachments_by_entry.setdefault(entry_id, []).append(attachment)
+
+    # Get all labels for entries, organized by entry_id (for template compatibility)
+    labels_by_entry: dict[int, list] = {}
+    if entry_ids:
+        for label in list_labels_for_entry_ids(entry_ids):
+            entry_id = int(label["entry_id"])
+            labels_by_entry.setdefault(entry_id, []).append(label)
+
+    # Also populate labels_by_entry for each entry by id if not already fetched
+    for entry_id in entry_ids:
+        if entry_id not in labels_by_entry:
+            labels_by_entry[entry_id] = list_labels_for_entry_id(entry_id)
+
+    # Get labels for the vendor
+    vendor_labels = list_labels_for_vendor_id(vendor_id)
+
+    # Get all labels
+    all_labels = list_labels()
+
+    # Get attachments for the entry being edited (if applicable)
+    entry_attachments = []
+    if entry_uid_to_edit:
+        for entry in entries:
+            if str(entry["entry_uid"]) == entry_uid_to_edit:
+                entry_attachments = list_attachments_for_entry_id(int(entry["id"]))
+                break
+
+    return {
+        "vendor": vendor,
+        "entries": entries,
+        "attachments_by_entry": attachments_by_entry,
+        "labels_by_entry": labels_by_entry,
+        "vendor_labels": vendor_labels,
+        "all_labels": all_labels,
+        "entry_attachments": entry_attachments,
+    }

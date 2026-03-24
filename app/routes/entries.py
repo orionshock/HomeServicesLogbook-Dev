@@ -15,12 +15,9 @@ from app.db import (
     get_attachment_by_uid,
     get_entry_by_uid,
     get_vendor_by_uid,
+    get_vendor_entry_form_context,
     list_attachments_for_entry_id,
-    list_attachments_for_entry_ids,
-    list_entries_for_vendor,
     list_labels,
-    list_labels_for_entry_id,
-    list_labels_for_vendor_id,
     list_labels_for_vendor_ids,
     list_vendors,
     replace_entry_labels,
@@ -231,13 +228,18 @@ def _render_entry_form(
     return_next: str | None = None,
     status_code: int = 200,
 ):
-    entries = list_entries_for_vendor(vendor["id"])
-    attachments_by_entry: dict[int, list] = {}
-    labels_by_entry: dict[int, list] = {}
-    for item in list_attachments_for_entry_ids([e["id"] for e in entries]):
-        attachments_by_entry.setdefault(item["entry_id"], []).append(item)
-    for item in entries:
-        labels_by_entry[item["id"]] = list_labels_for_entry_id(item["id"])
+    # Get all form context (entries, attachments, labels) without exposing PKs to this layer.
+    # The helper internally resolves the vendor UID to PK and aggregates all necessary data.
+    form_context = get_vendor_entry_form_context(
+        vendor_uid=vendor["vendor_uid"],
+        entry_uid_to_edit=current_entry_uid,
+    )
+    entries = form_context["entries"]
+    attachments_by_entry = form_context["attachments_by_entry"]
+    labels_by_entry = form_context["labels_by_entry"]
+    entry_attachments = form_context["entry_attachments"]
+    vendor_labels = form_context["vendor_labels"]
+    all_labels = form_context["all_labels"]
 
     if mode == "edit":
         entry_crumb_label = entry["entry_title"] if entry and entry.get("entry_title") else current_entry_uid
@@ -247,7 +249,6 @@ def _render_entry_form(
             {"label": vendor["vendor_name"], "url": path_for(request, "vendor_detail", vendor_uid=vendor["vendor_uid"])},
             {"label": f"Edit Entry - {entry_crumb_label}", "url": None},
         ]
-        entry_attachments = list_attachments_for_entry_id(entry["id"])
     else:
         breadcrumbs = [
             {"label": "Home", "url": path_for(request, "read_root")},
@@ -255,7 +256,6 @@ def _render_entry_form(
             {"label": vendor["vendor_name"], "url": path_for(request, "vendor_detail", vendor_uid=vendor["vendor_uid"])},
             {"label": "New Entry", "url": None},
         ]
-        entry_attachments = []
 
     response = render_template(
         request,
@@ -264,13 +264,13 @@ def _render_entry_form(
             "breadcrumbs": breadcrumbs,
             "mode": mode,
             "vendor": vendor,
-            "vendor_labels": list_labels_for_vendor_id(vendor["id"]),
+            "vendor_labels": vendor_labels,
             "entry": entry,
             "entry_attachments": entry_attachments,
             "entries": entries,
             "attachments_by_entry": attachments_by_entry,
             "labels_by_entry": labels_by_entry,
-            "all_labels": list_labels(),
+            "all_labels": all_labels,
             "selected_labels": selected_labels,
             "submitted_new_label_names": submitted_new_label_names or [],
             "field_label": "Labels",
