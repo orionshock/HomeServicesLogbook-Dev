@@ -276,3 +276,25 @@ def resolve_submitted_labels(
         resolved_ids.append(label_id)
 
     return resolved_ids
+
+
+def get_entry_labels_by_uid(entry_uid: str) -> list[sqlite3.Row]:
+    """Get labels for an entry using UID instead of PK."""
+    from .entries import get_entry_by_uid
+
+    entry = get_entry_by_uid(entry_uid)
+    if entry is None:
+        return []
+
+    return list_labels_for_entry_id(int(entry["id"]))
+
+
+def replace_entry_labels_by_uid(entry_uid: str, label_ids: list[int]) -> None:
+    """Replace entry labels using UID instead of PK."""
+    from .entries import get_entry_by_uid
+
+    entry = get_entry_by_uid(entry_uid)
+    if entry is None:
+        raise ValueError(f"Entry not found: {entry_uid}")
+
+    replace_entry_labels(int(entry["id"]), label_ids)

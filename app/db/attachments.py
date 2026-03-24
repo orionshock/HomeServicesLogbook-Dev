@@ -265,3 +265,52 @@ def store_attachment_uploads(
     """Write multiple uploaded files to disk and insert their attachment records."""
     for upload in uploads:
         store_attachment_upload(upload, entry_id=entry_id, actor=actor, max_upload_bytes=max_upload_bytes)
+
+
+def delete_entry_attachment_by_uid(attachment_uid: str) -> tuple[sqlite3.Row, None] | tuple[None, None]:
+    """
+    Delete an attachment by its UID and return the deleted attachment row.
+    
+    Returns:
+        (attachment_row, None) if attachment was found and deleted
+        (None, None) if attachment was not found
+    """
+    with get_connection() as conn:
+        attachment = conn.execute(
+            """
+            SELECT id, attachment_uid, entry_id, attachment_original_filename,
+                   attachment_relative_path, attachment_mime_type
+            FROM attachments
+            WHERE attachment_uid = ?
+            """,
+            (attachment_uid,),
+        ).fetchone()
+        if attachment is None:
+            return None, None
+
+        conn.execute(
+            "DELETE FROM attachments WHERE id = ?",
+            (attachment["id"],),
+        )
+        return attachment, None
+
+
+def store_attachment_uploads_for_entry_uid(
+    entry_uid: str,
+    uploads: list[UploadFile],
+    actor: str,
+    max_upload_bytes: int,
+) -> None:
+    """Store attachments for an entry using UID instead of PK."""
+    from .entries import get_entry_by_uid
+
+    entry = get_entry_by_uid(entry_uid)
+    if entry is None:
+        raise ValueError(f"Entry not found: {entry_uid}")
+
+    store_attachment_uploads(
+        uploads,
+        entry_id=int(entry["id"]),
+        actor=actor,
+        max_upload_bytes=max_upload_bytes,
+    )

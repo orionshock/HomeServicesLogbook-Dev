@@ -9,11 +9,12 @@ from fastapi.responses import FileResponse, RedirectResponse
 
 from app.db import (
     create_entry,
-    delete_attachment_by_uid_for_entry,
     delete_attachment_file,
     delete_entry_by_uid,
+    delete_entry_attachment_by_uid,
     get_attachment_by_uid,
     get_entry_by_uid,
+    get_entry_labels_by_uid,
     get_vendor_by_uid,
     get_vendor_entry_form_context,
     list_attachments_for_entry_id,
@@ -21,9 +22,11 @@ from app.db import (
     list_labels_for_vendor_ids,
     list_vendors,
     replace_entry_labels,
+    replace_entry_labels_by_uid,
     resolve_attachment_disk_path,
     resolve_submitted_labels,
     store_attachment_uploads,
+    store_attachment_uploads_for_entry_uid,
     update_entry_by_uid,
 )
 from app.routes import MAX_UPLOAD_BYTES, path_for, render_template
@@ -363,7 +366,7 @@ def entry_edit_form(request: Request, entry_uid: str, next: str | None = None):
         mode="edit",
         vendor=vendor,
         entry=dict(entry),
-        selected_labels=list_labels_for_entry_id(entry["id"]),
+        selected_labels=get_entry_labels_by_uid(entry_uid),
         current_entry_uid=entry_uid,
         form_action=path_for(request, "entry_edit_submit", entry_uid=entry_uid),
         submit_label="Save Entry Changes",
@@ -478,15 +481,15 @@ def entry_edit_submit(
         actor=actor,
         now=now,
     )
-    replace_entry_labels(entry["id"], resolved_label_ids)
+    replace_entry_labels_by_uid(entry_uid, resolved_label_ids)
 
     for attachment_uid in set(remove_attachment_uids or []):
-        deleted_attachment = delete_attachment_by_uid_for_entry(entry["id"], attachment_uid)
+        deleted_attachment, _ = delete_entry_attachment_by_uid(attachment_uid)
         if deleted_attachment is not None:
             delete_attachment_file(str(deleted_attachment["attachment_relative_path"]))
 
     try:
-        store_attachment_uploads(new_attachments, entry_id=entry["id"], actor=actor, max_upload_bytes=MAX_UPLOAD_BYTES)
+        store_attachment_uploads_for_entry_uid(entry_uid, new_attachments, actor=actor, max_upload_bytes=MAX_UPLOAD_BYTES)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
