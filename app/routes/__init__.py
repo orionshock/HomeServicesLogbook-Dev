@@ -3,6 +3,8 @@ from pathlib import Path
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
+from app.runtime import ALLOW_ACTOR_OVERRIDE
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
@@ -38,6 +40,7 @@ def render_template(request: Request, template_name: str, context: dict | None =
         "request": request,
         "url_for": url_for,
         "current_actor": getattr(request.state, "current_actor", _resolve_template_actor(request)),
+        "allow_actor_override": ALLOW_ACTOR_OVERRIDE,
     }
     if context:
         payload.update(context)

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.routes import path_for
-from app.runtime import APP_COOKIE_PATH, TRUST_UPSTREAM_AUTH, UPSTREAM_ACTOR_HEADER
+from app.runtime import ALLOW_ACTOR_OVERRIDE, APP_COOKIE_PATH, TRUST_UPSTREAM_AUTH, UPSTREAM_ACTOR_HEADER
 from app.utils import normalize_optional_text
 
 ACTOR_OVERRIDE_COOKIE = "actor_override"
@@ -23,7 +23,9 @@ def _read_upstream_actor(request: Request) -> str | None:
 
 
 def resolve_current_actor(request: Request) -> dict[str, str | None]:
-    override_actor = normalize_optional_text(request.cookies.get(ACTOR_OVERRIDE_COOKIE))
+    override_actor = None
+    if ALLOW_ACTOR_OVERRIDE:
+        override_actor = normalize_optional_text(request.cookies.get(ACTOR_OVERRIDE_COOKIE))
     return resolve_actor_with_override(request, override_actor)
 
 
@@ -79,6 +81,11 @@ def _redirect_target(request: Request) -> str:
 
 @router.post("/actor/set")
 async def set_actor_override(request: Request, actor_id: str = Form("")):
+    if not ALLOW_ACTOR_OVERRIDE:
+        if _is_async_request(request):
+            return JSONResponse(_actor_json_payload(resolve_current_actor(request)))
+        return RedirectResponse(url=_redirect_target(request), status_code=303)
+
     normalized_actor = normalize_optional_text(actor_id)
 
     if _is_async_request(request):
@@ -116,6 +123,11 @@ async def set_actor_override(request: Request, actor_id: str = Form("")):
 
 @router.post("/actor/reset")
 async def reset_actor_override(request: Request):
+    if not ALLOW_ACTOR_OVERRIDE:
+        if _is_async_request(request):
+            return JSONResponse(_actor_json_payload(resolve_current_actor(request)))
+        return RedirectResponse(url=_redirect_target(request), status_code=303)
+
     if _is_async_request(request):
         actor = resolve_actor_with_override(request, None)
         response = JSONResponse(_actor_json_payload(actor))

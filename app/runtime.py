@@ -8,6 +8,12 @@ def _is_truthy_env(value: str | None, *, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _is_enabled_env(value: str | None, *, default: bool = False) -> bool:
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true"}
+
+
 def _normalize_root_path(value: str | None) -> str:
     raw_value = (value or "").strip()
     if not raw_value or raw_value == "/":
@@ -56,6 +62,7 @@ def _validate_db_path(path: Path, *, env_name: str) -> None:
 
 TRUST_UPSTREAM_AUTH = _is_truthy_env(os.getenv("TRUST_UPSTREAM_AUTH"), default=False)
 UPSTREAM_ACTOR_HEADER = (os.getenv("UPSTREAM_ACTOR_HEADER", "X-Remote-User") or "").strip()
+ALLOW_ACTOR_OVERRIDE = _is_enabled_env(os.getenv("ALLOW_ACTOR_OVERRIDE"), default=False)
 APP_ROOT_PATH = _normalize_root_path(os.getenv("APP_ROOT_PATH"))
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
