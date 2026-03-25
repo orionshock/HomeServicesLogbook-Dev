@@ -295,3 +295,26 @@
         align-items: stretch;
     }
 }
+
+/* Vendor delete page */
+.vendor-danger-section {
+    border-top: 2px solid var(--danger, #c0392b);
+    margin-top: 32px;
+}
+
+.vendor-danger-section h2 {
+    color: var(--danger, #c0392b);
+}
+
+.delete-context-stats {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    column-gap: 16px;
+    row-gap: 4px;
+    margin: 16px 0;
+}
+
+.delete-context-stats dt {
+    font-weight: 600;
+}
+

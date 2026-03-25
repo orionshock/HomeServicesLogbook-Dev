@@ -13,6 +13,12 @@
         {% endif %}
     </div>
 
+    {% if delete_blocked %}
+    <div class="message-card" role="alert">
+        Permanent deletion is only available for archived vendors. Archive this vendor first if you want to delete it.
+    </div>
+    {% endif %}
+
     {% if vendor.vendor_archived_at %}
     <div class="message-card archived-notice">
         📦 This vendor was archived on <time class="js-local-time" datetime="{{ vendor.vendor_archived_at }}">{{ vendor.vendor_archived_at }}</time>. The history below is read-only.
@@ -37,5 +43,17 @@
         <p>No entries yet. Use New Entry to add the first logbook record.</p>
         {% endif %}
     </section>
+
+    {% if vendor.vendor_archived_at %}
+    <section class="content-section vendor-danger-section">
+        <h2>Danger Zone</h2>
+        <p>
+            Permanently delete this vendor and all of its entries.
+            This action cannot be undone.
+        </p>
+        <a href="{{ url_for('vendor_delete_page', vendor_uid=vendor.vendor_uid) }}" class="btn btn-danger">Delete Vendor Permanently</a>
+    </section>
+    {% endif %}
+
 </div>
 {% endblock %}

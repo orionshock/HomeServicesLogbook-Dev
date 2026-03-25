@@ -235,3 +235,115 @@ def unarchive_vendor_by_uid(vendor_uid: str, vendor_updated_at: str, vendor_upda
             (vendor_updated_at, vendor_updated_by, vendor_uid),
         )
         return True
+
+
+def get_vendor_delete_context(vendor_uid: str) -> dict | None:
+    """
+    Return stats and identity info needed to render the vendor delete confirmation page.
+
+    Returns None if the vendor does not exist.
+    PK resolution is internal.
+    """
+    with get_connection() as conn:
+        vendor = conn.execute(
+            """
+            SELECT id, vendor_uid, vendor_name, vendor_archived_at
+            FROM vendors
+            WHERE vendor_uid = ?
+            """,
+            (vendor_uid,),
+        ).fetchone()
+        if vendor is None:
+            return None
+
+        vendor_id = int(vendor["id"])
+
+        entry_count_row = conn.execute(
+            "SELECT COUNT(*) FROM entries WHERE vendor_id = ?",
+            (vendor_id,),
+        ).fetchone()
+        entry_count = int(entry_count_row[0]) if entry_count_row else 0
+
+        attachment_count_row = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM attachments
+            WHERE entry_id IN (SELECT id FROM entries WHERE vendor_id = ?)
+            """,
+            (vendor_id,),
+        ).fetchone()
+        attachment_count = int(attachment_count_row[0]) if attachment_count_row else 0
+
+        return {
+            "vendor_uid": str(vendor["vendor_uid"]),
+            "vendor_name": str(vendor["vendor_name"]),
+            "vendor_archived_at": vendor["vendor_archived_at"],
+            "entry_count": entry_count,
+            "attachment_count": attachment_count,
+        }
+
+
+def delete_vendor_by_uid(vendor_uid: str) -> bool:
+    """
+    Permanently delete a vendor and all of its associated data.
+
+    Deletion order:
+      1. Resolve vendor PK and gather entry IDs.
+      2. Delete all attachment files (file system; fails fast on hard error, missing files OK).
+      3. Delete all DB rows in a single transaction:
+         attachment rows, entry-label rows, entry rows, vendor-label rows, vendor row.
+
+    Returns False if the vendor does not exist.
+    Raises ValueError if an attachment path is invalid.
+    Raises OSError if a file exists but cannot be deleted.
+
+    Label rows themselves are NOT removed.
+    """
+    from .attachments import delete_attachment_files_for_vendor_entries
+
+    # Step 1: Resolve PKs
+    with get_connection() as conn:
+        vendor = conn.execute(
+            "SELECT id FROM vendors WHERE vendor_uid = ?",
+            (vendor_uid,),
+        ).fetchone()
+        if vendor is None:
+            return False
+
+        vendor_id = int(vendor["id"])
+
+        entry_rows = conn.execute(
+            "SELECT id FROM entries WHERE vendor_id = ?",
+            (vendor_id,),
+        ).fetchall()
+        entry_ids = [int(row["id"]) for row in entry_rows]
+
+    # Step 2: Delete attachment files before touching the DB
+    delete_attachment_files_for_vendor_entries(entry_ids)
+
+    # Step 3: Delete all DB rows in one transaction
+    with get_connection() as conn:
+        if entry_ids:
+            placeholders = ",".join("?" for _ in entry_ids)
+            conn.execute(
+                f"DELETE FROM attachments WHERE entry_id IN ({placeholders})",
+                tuple(entry_ids),
+            )
+            conn.execute(
+                f"DELETE FROM entry_labels WHERE entry_id IN ({placeholders})",
+                tuple(entry_ids),
+            )
+            conn.execute(
+                f"DELETE FROM entries WHERE id IN ({placeholders})",
+                tuple(entry_ids),
+            )
+        conn.execute(
+            "DELETE FROM vendor_labels WHERE vendor_id = ?",
+            (vendor_id,),
+        )
+        conn.execute(
+            "DELETE FROM vendors WHERE id = ?",
+            (vendor_id,),
+        )
+
+    return True

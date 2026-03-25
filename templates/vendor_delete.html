@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Vendor — Home Services Logbook{% endblock %}
+
+{% block content %}
+<div class="vendor-delete-page">
+
+    {% if page_error %}
+    <div class="form-error-summary" role="alert">
+        <strong>Deletion failed:</strong> {{ page_error }}
+    </div>
+    {% endif %}
+
+    <section class="content-section message-card">
+        <h1>Delete Vendor Permanently</h1>
+
+        <p>
+            You are about to permanently delete
+            <strong>{{ context.vendor_name }}</strong>
+            and all of its history.
+        </p>
+
+        <p>
+            <strong>This cannot be undone.</strong>
+            All entries and their attachments for this vendor will be removed.
+            Labels will not be affected.
+        </p>
+
+        <dl class="delete-context-stats">
+            <dt>Entries</dt>
+            <dd>{{ context.entry_count }}</dd>
+            <dt>Attachments</dt>
+            <dd>{{ context.attachment_count }}</dd>
+        </dl>
+
+        <div class="entry-actions">
+            <a href="{{ url_for('vendor_detail', vendor_uid=context.vendor_uid) }}" class="btn btn-secondary">Cancel</a>
+            <form method="post" action="{{ url_for('vendor_delete_confirm', vendor_uid=context.vendor_uid) }}" style="display: inline;">
+                <button
+                    type="submit"
+                    class="btn btn-danger"
+                    onclick="return confirm('Delete this vendor and all of its entries permanently? This cannot be undone.')"
+                >Delete Permanently</button>
+            </form>
+        </div>
+    </section>
+
+</div>
+{% endblock %}

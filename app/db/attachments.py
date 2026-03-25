@@ -170,6 +170,65 @@ def delete_attachment_files_for_entry(entry_id: int) -> None:
             ) from exc
 
 
+def delete_attachment_files_for_vendor_entries(entry_ids: list[int]) -> None:
+    """
+    Delete all attachment files for a list of entry IDs in one pass.
+
+    Intended for use by the vendor delete flow, where all entries for a vendor
+    must have their files cleaned up before any DB rows are removed.
+
+    - Missing files are silently skipped.
+    - Path-traversal or directory targets raise ValueError.
+    - Files that exist but cannot be deleted raise OSError.
+    - Fails fast on the first hard failure.
+
+    Does NOT modify any DB rows.
+    """
+    if not entry_ids:
+        return
+
+    with get_connection() as conn:
+        placeholders = ",".join("?" for _ in entry_ids)
+        attachments = conn.execute(
+            f"""
+            SELECT attachment_original_filename, attachment_relative_path
+            FROM attachments
+            WHERE entry_id IN ({placeholders})
+            ORDER BY id ASC
+            """,
+            tuple(entry_ids),
+        ).fetchall()
+
+    for attachment in attachments:
+        relative_path = str(attachment["attachment_relative_path"] or "").strip()
+        filename = str(attachment["attachment_original_filename"] or "").strip() or "(unknown filename)"
+        relative_display = relative_path or "(empty path)"
+
+        abs_path = _resolve_attachment_path(relative_path)
+        if abs_path is None:
+            raise ValueError(
+                f"Attachment path escapes uploads root for '{filename}' "
+                f"(path: {relative_display})"
+            )
+
+        if abs_path.exists() and abs_path.is_dir():
+            raise ValueError(
+                f"Attachment path is a directory for '{filename}' "
+                f"(path: {relative_display})"
+            )
+
+        if not abs_path.exists():
+            continue
+
+        try:
+            abs_path.unlink()
+        except OSError as exc:
+            raise OSError(
+                f"Could not delete attachment '{filename}' "
+                f"(path: {relative_display}): {exc.strerror or 'unknown error'}"
+            ) from exc
+
+
 def resolve_attachment_disk_path(relative_path: str) -> Path | None:
     """Public path resolver for use in route layer (e.g. serving attachment downloads)."""
     return _resolve_attachment_path(relative_path)
@@ -275,7 +334,6 @@ def delete_entry_attachment_by_uid(attachment_uid: str) -> bool:
     Internal helper. Do not use from routes.
     Use scoped delete helpers instead.
 
-    @Copilot: keep this function around for when we implement Vendor Delete maybe; remove this coment afterimplementation.\\\\\\\\\\\\\\\\\\\\\\\\\\\\
     """
     with get_connection() as conn:
         attachment = conn.execute(

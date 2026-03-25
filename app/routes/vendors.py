@@ -7,7 +7,9 @@ from fastapi.responses import RedirectResponse
 from app.db import (
     archive_vendor_by_uid,
     create_vendor,
+    delete_vendor_by_uid,
     get_vendor_by_uid,
+    get_vendor_delete_context,
     list_entries_for_vendor_uid,
     list_entry_related_data_by_uids,
     list_labels,
@@ -353,7 +355,7 @@ def vendor_unarchive(request: Request, vendor_uid: str):
 
 
 @router.get("/vendor/{vendor_uid}")
-def vendor_detail(request: Request, vendor_uid: str):
+def vendor_detail(request: Request, vendor_uid: str, delete_blocked: int | None = None):
     vendor = get_vendor_by_uid(vendor_uid)
     if vendor is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
@@ -379,6 +381,7 @@ def vendor_detail(request: Request, vendor_uid: str):
             "entries": entries,
             "attachments_by_entry_uid": attachments_by_entry_uid,
             "labels_by_entry_uid": labels_by_entry_uid,
+            "delete_blocked": bool(delete_blocked),
         },
     )
 
@@ -498,3 +501,77 @@ def vendor_edit_submit(
     )
 
     return RedirectResponse(url=path_for(request, "vendor_detail", vendor_uid=vendor_uid), status_code=303)
+
+
+@router.get("/vendor/{vendor_uid}/delete")
+def vendor_delete_page(request: Request, vendor_uid: str, page_error: str | None = None):
+    context = get_vendor_delete_context(vendor_uid)
+    if context is None:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    if not context["vendor_archived_at"]:
+        # Active vendors may not be deleted; redirect back to the detail page.
+        return RedirectResponse(
+            url=path_for(request, "vendor_detail", vendor_uid=vendor_uid)
+            + "?delete_blocked=1",
+            status_code=303,
+        )
+
+    return render_template(
+        request,
+        "vendor_delete.html",
+        {
+            "breadcrumbs": [
+                {"label": "Home", "url": path_for(request, "read_root")},
+                {"label": "Vendors", "url": path_for(request, "vendor_list")},
+                {
+                    "label": context["vendor_name"],
+                    "url": path_for(request, "vendor_detail", vendor_uid=vendor_uid),
+                },
+                {"label": "Delete Vendor", "url": None},
+            ],
+            "context": context,
+            "page_error": page_error,
+        },
+    )
+
+
+@router.post("/vendor/{vendor_uid}/delete/confirm")
+def vendor_delete_confirm(request: Request, vendor_uid: str):
+    context = get_vendor_delete_context(vendor_uid)
+    if context is None:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    if not context["vendor_archived_at"]:
+        return RedirectResponse(
+            url=path_for(request, "vendor_detail", vendor_uid=vendor_uid)
+            + "?delete_blocked=1",
+            status_code=303,
+        )
+
+    try:
+        delete_vendor_by_uid(vendor_uid)
+    except (ValueError, OSError) as exc:
+        return render_template(
+            request,
+            "vendor_delete.html",
+            {
+                "breadcrumbs": [
+                    {"label": "Home", "url": path_for(request, "read_root")},
+                    {"label": "Vendors", "url": path_for(request, "vendor_list")},
+                    {
+                        "label": context["vendor_name"],
+                        "url": path_for(request, "vendor_detail", vendor_uid=vendor_uid),
+                    },
+                    {"label": "Delete Vendor", "url": None},
+                ],
+                "context": context,
+                "page_error": str(exc),
+            },
+        )
+
+    # Redirect to vendors list showing archived vendors, since the deleted vendor was archived.
+    return RedirectResponse(
+        url=path_for(request, "vendor_list") + "?show_archived=1",
+        status_code=303,
+    )
