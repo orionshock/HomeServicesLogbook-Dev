@@ -70,6 +70,46 @@ def list_entry_vendor_picker_rows(include_archived: bool = False) -> list[dict]:
     return sorted(picker_rows, key=lambda vendor: str(vendor["vendor_name"]).casefold())
 
 
+def list_vendor_listing_rows(include_archived: bool = False) -> list[dict]:
+    """
+    Return route-ready vendor listing rows using UIDs only.
+
+    Internal PK usage is contained in DB layer.
+    """
+    from .labels import list_labels_for_vendor_ids
+
+    vendors = list_vendors(include_archived=include_archived)
+    labels_by_vendor_id: dict[int, list[dict]] = {}
+    vendor_ids = [int(vendor["id"]) for vendor in vendors]
+
+    for row in list_labels_for_vendor_ids(vendor_ids):
+        labels_by_vendor_id.setdefault(int(row["vendor_id"]), []).append(
+            {
+                "label_uid": row["label_uid"],
+                "name": row["name"],
+                "color": row["color"],
+            }
+        )
+
+    listing_rows: list[dict] = []
+    for vendor in vendors:
+        vendor_id = int(vendor["id"])
+        labels = labels_by_vendor_id.get(vendor_id, [])
+        label_names = [label["name"] for label in labels]
+        listing_rows.append(
+            {
+                "vendor_uid": vendor["vendor_uid"],
+                "vendor_name": vendor["vendor_name"],
+                "vendor_archived_at": vendor["vendor_archived_at"],
+                "labels": labels,
+                "label_names": label_names,
+                "search_text": " ".join([vendor["vendor_name"], *label_names]).strip(),
+            }
+        )
+
+    return sorted(listing_rows, key=lambda vendor: str(vendor["vendor_name"]).casefold())
+
+
 def create_vendor(
     vendor_uid: str,
     vendor_name: str,

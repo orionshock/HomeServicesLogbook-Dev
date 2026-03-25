@@ -55,6 +55,21 @@ def list_entries_for_vendor(vendor_id: int) -> list[sqlite3.Row]:
         ).fetchall()
 
 
+def list_entries_for_vendor_uid(vendor_uid: str) -> list[sqlite3.Row]:
+    """List entries for a vendor using UID instead of PK."""
+    with get_connection() as conn:
+        return conn.execute(
+            """
+            SELECT e.*, v.vendor_uid, v.vendor_name
+            FROM entries e
+            JOIN vendors v ON v.id = e.vendor_id
+            WHERE v.vendor_uid = ?
+            ORDER BY e.entry_created_at DESC, e.id DESC
+            """,
+            (vendor_uid,),
+        ).fetchall()
+
+
 def list_logbook_entries(
     page: int,
     page_size: int = 25,
@@ -305,8 +320,8 @@ def get_vendor_entry_form_context(
         {
             "vendor": vendor_row,
             "entries": [entry_rows],  # all entries for vendor, ordered DESC by created_at
-            "attachments_by_entry": dict[int, list],  # keyed by entry id (for template)
-            "labels_by_entry": dict[int, list],  # keyed by entry id (for template)
+            "attachments_by_entry_uid": dict[str, list],
+            "labels_by_entry_uid": dict[str, list],
             "vendor_labels": [label_rows],
             "all_labels": [label_rows],
             "entry_attachments": [attachment_rows],  # attachments for current entry (if editing)
@@ -333,27 +348,35 @@ def get_vendor_entry_form_context(
     entries = list_entries_for_vendor(vendor_id)
     entry_ids = [int(e["id"]) for e in entries]
 
-    # Build map from entry_id to entry_uid for looking up attachments later
+    # Build map from entry_id to entry_uid for UID-keyed related collections
     entry_id_to_uid = {int(e["id"]): str(e["entry_uid"]) for e in entries}
 
-    # Get all attachments for all entries, organized by entry_id (for template compatibility)
-    attachments_by_entry: dict[int, list] = {}
+    # Get all attachments for all entries, organized by entry_uid.
+    attachments_by_entry_uid: dict[str, list] = {}
     if entry_ids:
         for attachment in list_attachments_for_entry_ids(entry_ids):
             entry_id = int(attachment["entry_id"])
-            attachments_by_entry.setdefault(entry_id, []).append(attachment)
+            entry_uid = entry_id_to_uid.get(entry_id)
+            if entry_uid is None:
+                continue
+            attachments_by_entry_uid.setdefault(entry_uid, []).append(attachment)
 
-    # Get all labels for entries, organized by entry_id (for template compatibility)
-    labels_by_entry: dict[int, list] = {}
+    # Get all labels for entries, organized by entry_uid.
+    labels_by_entry_uid: dict[str, list] = {}
     if entry_ids:
         for label in list_labels_for_entry_ids(entry_ids):
             entry_id = int(label["entry_id"])
-            labels_by_entry.setdefault(entry_id, []).append(label)
+            entry_uid = entry_id_to_uid.get(entry_id)
+            if entry_uid is None:
+                continue
+            labels_by_entry_uid.setdefault(entry_uid, []).append(label)
 
-    # Also populate labels_by_entry for each entry by id if not already fetched
+    # Also populate labels for entries missing from the bulk fetch.
     for entry_id in entry_ids:
-        if entry_id not in labels_by_entry:
-            labels_by_entry[entry_id] = list_labels_for_entry_id(entry_id)
+        entry_uid = entry_id_to_uid.get(entry_id)
+        if entry_uid is None or entry_uid in labels_by_entry_uid:
+            continue
+        labels_by_entry_uid[entry_uid] = list_labels_for_entry_id(entry_id)
 
     # Get labels for the vendor
     vendor_labels = list_labels_for_vendor_id(vendor_id)
@@ -372,9 +395,72 @@ def get_vendor_entry_form_context(
     return {
         "vendor": vendor,
         "entries": entries,
-        "attachments_by_entry": attachments_by_entry,
-        "labels_by_entry": labels_by_entry,
+        "attachments_by_entry_uid": attachments_by_entry_uid,
+        "labels_by_entry_uid": labels_by_entry_uid,
         "vendor_labels": vendor_labels,
         "all_labels": all_labels,
         "entry_attachments": entry_attachments,
+    }
+
+
+def list_entry_related_data_by_uids(entry_uids: list[str]) -> dict[str, dict[str, list[sqlite3.Row]]]:
+    """
+    Return attachment and label collections keyed by entry UID.
+
+    Internal PK joins stay in the DB layer.
+    """
+    clean_entry_uids = [str(entry_uid).strip() for entry_uid in entry_uids if str(entry_uid).strip()]
+    unique_entry_uids = list(dict.fromkeys(clean_entry_uids))
+    if not unique_entry_uids:
+        return {
+            "attachments_by_entry_uid": {},
+            "labels_by_entry_uid": {},
+        }
+
+    placeholders = ", ".join("?" for _ in unique_entry_uids)
+
+    with get_connection() as conn:
+        attachment_rows = conn.execute(
+            f"""
+            SELECT
+                e.entry_uid,
+                a.attachment_uid,
+                a.attachment_original_filename
+            FROM attachments a
+            JOIN entries e ON e.id = a.entry_id
+            WHERE e.entry_uid IN ({placeholders})
+            ORDER BY a.id ASC
+            """,
+            unique_entry_uids,
+        ).fetchall()
+
+        label_rows = conn.execute(
+            f"""
+            SELECT
+                e.entry_uid,
+                l.label_uid,
+                l.label_name AS name,
+                l.label_color AS color
+            FROM entry_labels el
+            JOIN entries e ON e.id = el.entry_id
+            JOIN labels l ON l.id = el.label_id
+            WHERE e.entry_uid IN ({placeholders})
+            ORDER BY e.entry_uid, l.label_name COLLATE NOCASE
+            """,
+            unique_entry_uids,
+        ).fetchall()
+
+    attachments_by_entry_uid: dict[str, list[sqlite3.Row]] = {}
+    for row in attachment_rows:
+        entry_uid = str(row["entry_uid"])
+        attachments_by_entry_uid.setdefault(entry_uid, []).append(row)
+
+    labels_by_entry_uid: dict[str, list[sqlite3.Row]] = {}
+    for row in label_rows:
+        entry_uid = str(row["entry_uid"])
+        labels_by_entry_uid.setdefault(entry_uid, []).append(row)
+
+    return {
+        "attachments_by_entry_uid": attachments_by_entry_uid,
+        "labels_by_entry_uid": labels_by_entry_uid,
     }

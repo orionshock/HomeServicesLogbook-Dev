@@ -8,14 +8,12 @@ from app.db import (
     archive_vendor_by_uid,
     create_vendor,
     get_vendor_by_uid,
-    list_attachments_for_entry_ids,
-    list_entries_for_vendor,
+    list_entries_for_vendor_uid,
+    list_entry_related_data_by_uids,
     list_labels,
-    list_labels_for_entry_id,
-    list_labels_for_vendor_id,
-    list_labels_for_vendor_ids,
-    list_vendors,
-    replace_vendor_labels,
+    list_labels_for_vendor_uid,
+    list_vendor_listing_rows,
+    replace_vendor_labels_by_uid,
     resolve_submitted_labels,
     unarchive_vendor_by_uid,
     update_vendor_by_uid,
@@ -51,10 +49,6 @@ def normalize_portal_url(value: str) -> str | None:
     return normalized
 
 
-def _vendor_name_sort_key(vendor: dict) -> str:
-    return str(vendor["vendor_name"]).casefold()
-
-
 def _az_section_key(vendor_name: str) -> str:
     first_character = (vendor_name or "").strip()[:1]
     if not first_character:
@@ -68,40 +62,6 @@ def _az_section_key(vendor_name: str) -> str:
         return uppercase_character
 
     return "#"
-
-
-def _build_vendor_listing_rows(vendors: list) -> list[dict]:
-    labels_by_vendor_id: dict[int, list[dict]] = {}
-    vendor_ids = [int(vendor["id"]) for vendor in vendors]
-
-    for row in list_labels_for_vendor_ids(vendor_ids):
-        labels_by_vendor_id.setdefault(int(row["vendor_id"]), []).append(
-            {
-                "id": int(row["id"]),
-                "label_uid": row["label_uid"],
-                "name": row["name"],
-                "color": row["color"],
-            }
-        )
-
-    listing_rows: list[dict] = []
-    for vendor in vendors:
-        vendor_id = int(vendor["id"])
-        labels = labels_by_vendor_id.get(vendor_id, [])
-        label_names = [label["name"] for label in labels]
-        listing_rows.append(
-            {
-                "id": vendor_id,
-                "vendor_uid": vendor["vendor_uid"],
-                "vendor_name": vendor["vendor_name"],
-                "vendor_archived_at": vendor["vendor_archived_at"],
-                "labels": labels,
-                "label_names": label_names,
-                "search_text": " ".join([vendor["vendor_name"], *label_names]).strip(),
-            }
-        )
-
-    return sorted(listing_rows, key=_vendor_name_sort_key)
 
 
 def _build_az_sections(vendors: list[dict]) -> list[dict]:
@@ -325,17 +285,13 @@ def vendor_new_submit(
             status_code=400,
         )
 
-    created_vendor = get_vendor_by_uid(vendor_uid)
-    if created_vendor is None:
-        raise HTTPException(status_code=500, detail="Vendor was not created")
-
     resolved_label_ids = resolve_submitted_labels(
         label_uids=label_uids or [],
         new_label_names=new_label_names or [],
         actor=actor,
         now=now,
     )
-    replace_vendor_labels(created_vendor["id"], resolved_label_ids)
+    replace_vendor_labels_by_uid(vendor_uid, resolved_label_ids)
 
     return RedirectResponse(url=path_for(request, "vendor_detail", vendor_uid=vendor_uid), status_code=303)
 
@@ -348,8 +304,7 @@ def vendor_list(request: Request, show_archived: int | None = None):
     else:
         include_archived = request.cookies.get("show_archived_vendors") == "1"
 
-    vendors = list_vendors(include_archived)
-    listing_rows = _build_vendor_listing_rows(vendors)
+    listing_rows = list_vendor_listing_rows(include_archived)
     response = render_template(
         request,
         "vendor_listing.html",
@@ -404,14 +359,12 @@ def vendor_detail(request: Request, vendor_uid: str):
     if vendor is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
 
-    entries = list_entries_for_vendor(vendor["id"])
-    vendor_labels = list_labels_for_vendor_id(vendor["id"])
-    attachments_by_entry: dict[int, list] = {}
-    labels_by_entry: dict[int, list] = {}
-    for item in list_attachments_for_entry_ids([e["id"] for e in entries]):
-        attachments_by_entry.setdefault(item["entry_id"], []).append(item)
-    for item in entries:
-        labels_by_entry[item["id"]] = list_labels_for_entry_id(item["id"])
+    entries = list_entries_for_vendor_uid(vendor_uid)
+    vendor_labels = list_labels_for_vendor_uid(vendor_uid)
+    entry_uids = [str(entry["entry_uid"]) for entry in entries]
+    related_data = list_entry_related_data_by_uids(entry_uids)
+    attachments_by_entry_uid = related_data["attachments_by_entry_uid"]
+    labels_by_entry_uid = related_data["labels_by_entry_uid"]
 
     return render_template(
         request,
@@ -425,8 +378,8 @@ def vendor_detail(request: Request, vendor_uid: str):
             "vendor": vendor,
             "vendor_labels": vendor_labels,
             "entries": entries,
-            "attachments_by_entry": attachments_by_entry,
-            "labels_by_entry": labels_by_entry,
+            "attachments_by_entry_uid": attachments_by_entry_uid,
+            "labels_by_entry_uid": labels_by_entry_uid,
         },
     )
 
@@ -443,7 +396,7 @@ def vendor_edit_form(request: Request, vendor_uid: str):
         form_action=path_for(request, "vendor_edit_submit", vendor_uid=vendor_uid),
         submit_label="Save Changes",
         vendor=dict(vendor),
-        selected_labels=list_labels_for_vendor_id(vendor["id"]),
+        selected_labels=list_labels_for_vendor_uid(vendor_uid),
     )
 
 
@@ -543,6 +496,6 @@ def vendor_edit_submit(
         actor=actor,
         now=now,
     )
-    replace_vendor_labels(vendor["id"], resolved_label_ids)
+    replace_vendor_labels_by_uid(vendor_uid, resolved_label_ids)
 
     return RedirectResponse(url=path_for(request, "vendor_detail", vendor_uid=vendor_uid), status_code=303)

@@ -17,7 +17,6 @@ from app.db import (
     list_entry_vendor_picker_rows,
     get_vendor_by_uid,
     get_vendor_entry_form_context,
-    list_attachments_for_entry_id,
     list_labels,
     replace_entry_labels_by_uid,
     resolve_attachment_disk_path,
@@ -199,8 +198,8 @@ def _render_entry_form(
         entry_uid_to_edit=current_entry_uid,
     )
     entries = form_context["entries"]
-    attachments_by_entry = form_context["attachments_by_entry"]
-    labels_by_entry = form_context["labels_by_entry"]
+    attachments_by_entry_uid = form_context["attachments_by_entry_uid"]
+    labels_by_entry_uid = form_context["labels_by_entry_uid"]
     entry_attachments = form_context["entry_attachments"]
     vendor_labels = form_context["vendor_labels"]
     all_labels = form_context["all_labels"]
@@ -232,8 +231,8 @@ def _render_entry_form(
             "entry": entry,
             "entry_attachments": entry_attachments,
             "entries": entries,
-            "attachments_by_entry": attachments_by_entry,
-            "labels_by_entry": labels_by_entry,
+            "attachments_by_entry_uid": attachments_by_entry_uid,
+            "labels_by_entry_uid": labels_by_entry_uid,
             "all_labels": all_labels,
             "selected_labels": selected_labels,
             "submitted_new_label_names": submitted_new_label_names or [],

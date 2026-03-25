@@ -39,8 +39,8 @@
     <div class="entry-history-list logbook-entry-list">
         {% for entry in entries %}
         {% set log_entry = entry %}
-        {% set log_entry_attachments = attachments_by_entry.get(entry.id, []) %}
-        {% set log_entry_labels = labels_by_entry.get(entry.id, []) %}
+        {% set log_entry_attachments = attachments_by_entry_uid.get(entry.entry_uid, []) %}
+        {% set log_entry_labels = labels_by_entry_uid.get(entry.entry_uid, []) %}
         {% set log_entry_next = entry_edit_return_target %}
         {% include "partials/logbook_entry_card.html" %}
         {% endfor %}

@@ -181,6 +181,28 @@ def replace_vendor_labels(vendor_id: int, label_ids: list[int]) -> None:
             )
 
 
+def list_labels_for_vendor_uid(vendor_uid: str) -> list[sqlite3.Row]:
+    """Get labels for a vendor using UID instead of PK."""
+    from .vendors import get_vendor_by_uid
+
+    vendor = get_vendor_by_uid(vendor_uid)
+    if vendor is None:
+        return []
+
+    return list_labels_for_vendor_id(int(vendor["id"]))
+
+
+def replace_vendor_labels_by_uid(vendor_uid: str, label_ids: list[int]) -> None:
+    """Replace vendor labels using UID instead of PK."""
+    from .vendors import get_vendor_by_uid
+
+    vendor = get_vendor_by_uid(vendor_uid)
+    if vendor is None:
+        raise ValueError(f"Vendor not found: {vendor_uid}")
+
+    replace_vendor_labels(int(vendor["id"]), label_ids)
+
+
 def list_labels_for_entry_id(entry_id: int) -> list[sqlite3.Row]:
     with get_connection() as conn:
         return conn.execute(

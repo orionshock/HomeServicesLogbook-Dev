@@ -27,8 +27,8 @@
         {% for entry in entries %}
         {% set log_entry = entry %}
         {% set log_mode = "full" %}
-        {% set log_entry_attachments = attachments_by_entry.get(entry.id, []) %}
-        {% set log_entry_labels = labels_by_entry.get(entry.id, []) %}
+        {% set log_entry_attachments = attachments_by_entry_uid.get(entry.entry_uid, []) %}
+        {% set log_entry_labels = labels_by_entry_uid.get(entry.entry_uid, []) %}
         {% set log_entry_next = url_for('vendor_detail', vendor_uid=vendor.vendor_uid) %}
         {% include "partials/log_entry_card.html" %}
         {% endfor %}

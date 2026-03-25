@@ -2,9 +2,7 @@ from urllib.parse import urlencode
 
 from fastapi import APIRouter, Request
 
-from app.db.attachments import list_attachments_for_entry_ids
-from app.db.entries import count_logbook_entries, list_logbook_entries
-from app.db.labels import list_labels_for_entry_ids
+from app.db.entries import count_logbook_entries, list_entry_related_data_by_uids, list_logbook_entries
 from app.routes import path_for, render_template
 from app.runtime import APP_COOKIE_PATH
 
@@ -51,15 +49,10 @@ def logbook_page(request: Request, page: int = 1, show_archived: int | None = No
     if return_query_params:
         entry_edit_return_target = f"{entry_edit_return_target}?{urlencode(return_query_params)}"
 
-    entry_ids = [int(entry["id"]) for entry in entries]
-
-    attachments_by_entry: dict[int, list] = {}
-    for attachment in list_attachments_for_entry_ids(entry_ids):
-        attachments_by_entry.setdefault(int(attachment["entry_id"]), []).append(attachment)
-
-    labels_by_entry: dict[int, list] = {}
-    for label in list_labels_for_entry_ids(entry_ids):
-        labels_by_entry.setdefault(int(label["entry_id"]), []).append(label)
+    entry_uids = [str(entry["entry_uid"]) for entry in entries]
+    related_data = list_entry_related_data_by_uids(entry_uids)
+    attachments_by_entry_uid = related_data["attachments_by_entry_uid"]
+    labels_by_entry_uid = related_data["labels_by_entry_uid"]
 
     has_prev = current_page > 1
     has_next = current_page * PAGE_SIZE < total_entries
@@ -73,8 +66,8 @@ def logbook_page(request: Request, page: int = 1, show_archived: int | None = No
                 {"label": "Logbook", "url": None},
             ],
             "entries": entries,
-            "attachments_by_entry": attachments_by_entry,
-            "labels_by_entry": labels_by_entry,
+            "attachments_by_entry_uid": attachments_by_entry_uid,
+            "labels_by_entry_uid": labels_by_entry_uid,
             "page": current_page,
             "has_prev": has_prev,
             "has_next": has_next,
