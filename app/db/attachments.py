@@ -1,3 +1,5 @@
+"""Attachment metadata persistence and upload file lifecycle helpers."""
+
 import re
 import sqlite3
 from datetime import datetime, timezone
@@ -13,6 +15,7 @@ from .connection import get_connection
 
 
 def get_attachment_by_uid(attachment_uid: str) -> sqlite3.Row | None:
+    """Return attachment metadata for a public attachment UID."""
     with get_connection() as conn:
         return conn.execute(
             """
@@ -26,6 +29,7 @@ def get_attachment_by_uid(attachment_uid: str) -> sqlite3.Row | None:
 
 
 def list_attachments_for_entry_id(entry_id: int) -> list[sqlite3.Row]:
+    """List all attachments linked to an entry primary key."""
     with get_connection() as conn:
         return conn.execute(
             """
@@ -40,11 +44,8 @@ def list_attachments_for_entry_id(entry_id: int) -> list[sqlite3.Row]:
         ).fetchall()
 
 
-# NOTE:
-# This dynamically generates "?, ?, ?" placeholders for a parameterized IN clause.
-# Only placeholder tokens are interpolated, never user input.
-# The actual values are still bound safely through sqlite parameters.
 def list_attachments_for_entry_ids(entry_ids: list[int]) -> list[sqlite3.Row]:
+    """List attachment rows for multiple entry IDs using a parameterized IN clause."""
     if not entry_ids:
         return []
     with get_connection() as conn:
@@ -71,6 +72,7 @@ def create_attachment(
     attachment_created_by: str,
     attachment_created_at: str,
 ) -> None:
+    """Insert an attachment metadata row."""
     with get_connection() as conn:
         conn.execute(
             """
@@ -97,6 +99,7 @@ def create_attachment(
 
 
 def delete_attachment_by_uid_for_entry(entry_id: int, attachment_uid: str) -> sqlite3.Row | None:
+    """Delete a specific attachment row scoped to an entry, returning deleted metadata."""
     with get_connection() as conn:
         attachment = conn.execute(
             """
@@ -173,6 +176,7 @@ def resolve_attachment_disk_path(relative_path: str) -> Path | None:
 
 
 def _make_stored_filename(original_name: str) -> str:
+    """Generate a collision-resistant stored filename while preserving extension."""
     ext = Path(original_name or "").suffix.lower()
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     short = uuid.uuid4().hex[:6]
@@ -180,6 +184,7 @@ def _make_stored_filename(original_name: str) -> str:
 
 
 def _sanitize_original_filename(filename: str) -> str:
+    """Normalize user-provided filename to a safe metadata value."""
     basename = Path(filename or "").name
     sanitized = re.sub(r"\s+", "_", basename)
     sanitized = re.sub(r"[^A-Za-z0-9._-]", "_", sanitized)
@@ -205,7 +210,6 @@ def store_attachment_upload(
         raise ValueError("Attachment filename must include an extension")
 
     attachment_stored_filename = _make_stored_filename(attachment_original_filename)
-    # Store path relative to APP_UPLOADS_DIR.
     attachment_relative_path = relative_dir / attachment_stored_filename
     disk_path = absolute_dir / attachment_stored_filename
 

@@ -1,3 +1,5 @@
+"""Entry persistence queries and form-context aggregation helpers."""
+
 import sqlite3
 
 from .connection import get_connection
@@ -8,6 +10,7 @@ def _build_logbook_where_clause(
     include_archived_vendors: bool,
     search_text: str | None,
 ) -> tuple[str, list[str]]:
+    """Build the optional WHERE clause and parameters for logbook listing queries."""
     clauses: list[str] = []
     params: list[str] = []
 
@@ -43,6 +46,7 @@ def _build_logbook_where_clause(
 
 
 def list_entries_for_vendor(vendor_id: int) -> list[sqlite3.Row]:
+    """List entries for a vendor primary key, newest first."""
     with get_connection() as conn:
         return conn.execute(
             """
@@ -76,6 +80,7 @@ def list_logbook_entries(
     include_archived_vendors: bool = False,
     search_text: str | None = None,
 ) -> list[sqlite3.Row]:
+    """Return paginated logbook entries with optional archive/search filters."""
     safe_page = max(1, int(page))
     safe_page_size = max(1, int(page_size))
     offset = (safe_page - 1) * safe_page_size
@@ -107,6 +112,7 @@ def count_logbook_entries(
     include_archived_vendors: bool = False,
     search_text: str | None = None,
 ) -> int:
+    """Count logbook entries for the current filter settings."""
     with get_connection() as conn:
         where_clause, where_params = _build_logbook_where_clause(
             include_archived_vendors=include_archived_vendors,
@@ -136,6 +142,7 @@ def get_entry_by_uid(entry_uid: str) -> sqlite3.Row | None:
             """,
             (entry_uid,),
         ).fetchone()
+
 
 def create_entry(
     entry_uid: str,
@@ -242,6 +249,7 @@ def update_entry_by_uid(
     entry_updated_at: str,
     entry_updated_by: str,
 ) -> None:
+    """Update an entry by public UID."""
     with get_connection() as conn:
         try:
             conn.execute(
@@ -290,10 +298,8 @@ def delete_entry_by_uid(entry_uid: str) -> str | None:
     entry_id = int(entry["id"])
     vendor_uid = str(entry["vendor_uid"])
 
-    # Validate and delete physical files first. Raises on failure.
     delete_attachment_files_for_entry(entry_id)
 
-    # Only reach here if all file deletions succeeded.
     with get_connection() as conn:
         conn.execute("DELETE FROM attachments WHERE entry_id = ?", (entry_id,))
         conn.execute("DELETE FROM entry_labels WHERE entry_id = ?", (entry_id,))
@@ -307,27 +313,10 @@ def get_vendor_entry_form_context(
     entry_uid_to_edit: str | None = None,
 ) -> dict:
     """
-    Get complete context for entry form (new or edit) without exposing PKs to routes.
-    
-    Internally resolves UIDs to PKs and aggregates all necessary data for form rendering.
-    Returns UID-shaped data that routes can consume directly.
-    
-    Args:
-        vendor_uid: UID of the vendor
-        entry_uid_to_edit: Optional UID of entry being edited (none for new entry form)
-    
-    Returns:
-        {
-            "vendor": vendor_row,
-            "entries": [entry_rows],  # all entries for vendor, ordered DESC by created_at
-            "attachments_by_entry_uid": dict[str, list],
-            "labels_by_entry_uid": dict[str, list],
-            "vendor_labels": [label_rows],
-            "all_labels": [label_rows],
-            "entry_attachments": [attachment_rows],  # attachments for current entry (if editing)
-        }
-    
-    Raises ValueError if vendor not found.
+    Return UID-shaped form context for vendor entry pages.
+
+    The helper resolves internal PK relationships and keeps routes free of DB-key joins.
+    Raises ValueError when the vendor UID does not exist.
     """
     from .attachments import list_attachments_for_entry_id, list_attachments_for_entry_ids
     from .labels import (
@@ -344,14 +333,11 @@ def get_vendor_entry_form_context(
 
     vendor_id = int(vendor["id"])
 
-    # Get all entries for this vendor
     entries = list_entries_for_vendor(vendor_id)
     entry_ids = [int(e["id"]) for e in entries]
 
-    # Build map from entry_id to entry_uid for UID-keyed related collections
     entry_id_to_uid = {int(e["id"]): str(e["entry_uid"]) for e in entries}
 
-    # Get all attachments for all entries, organized by entry_uid.
     attachments_by_entry_uid: dict[str, list] = {}
     if entry_ids:
         for attachment in list_attachments_for_entry_ids(entry_ids):
@@ -361,7 +347,6 @@ def get_vendor_entry_form_context(
                 continue
             attachments_by_entry_uid.setdefault(entry_uid, []).append(attachment)
 
-    # Get all labels for entries, organized by entry_uid.
     labels_by_entry_uid: dict[str, list] = {}
     if entry_ids:
         for label in list_labels_for_entry_ids(entry_ids):
@@ -371,20 +356,16 @@ def get_vendor_entry_form_context(
                 continue
             labels_by_entry_uid.setdefault(entry_uid, []).append(label)
 
-    # Also populate labels for entries missing from the bulk fetch.
     for entry_id in entry_ids:
         entry_uid = entry_id_to_uid.get(entry_id)
         if entry_uid is None or entry_uid in labels_by_entry_uid:
             continue
         labels_by_entry_uid[entry_uid] = list_labels_for_entry_id(entry_id)
 
-    # Get labels for the vendor
     vendor_labels = list_labels_for_vendor_id(vendor_id)
 
-    # Get all labels
     all_labels = list_labels()
 
-    # Get attachments for the entry being edited (if applicable)
     entry_attachments = []
     if entry_uid_to_edit:
         for entry in entries:

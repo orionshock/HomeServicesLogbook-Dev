@@ -1,12 +1,16 @@
+"""SQLite schema setup for the application data model."""
+
 from .connection import get_connection
 from app.utils import utc_now_iso
 
 
 def init_db() -> None:
+    """Create tables/indexes and seed default settings for local development.
+
+    Schema changes are applied by recreating data/logbook.db; this function does not run migrations.
+    """
     with get_connection() as conn:
         now = utc_now_iso()
-        # Dev mode: schema changes are applied by recreating data/logbook.db.
-        # Do not add migration/backfill logic here.
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS vendors (
                 id                     INTEGER PRIMARY KEY,

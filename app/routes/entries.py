@@ -1,3 +1,5 @@
+"""Entry and attachment route handlers, including ICS export helpers."""
+
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import re
@@ -37,6 +39,7 @@ router = APIRouter()
 
 
 def _safe_internal_return_target(value: str | None) -> str | None:
+    """Allow only safe internal redirect targets."""
     target = (value or "").strip()
     if not target:
         return None
@@ -53,6 +56,7 @@ def _safe_internal_return_target(value: str | None) -> str | None:
 
 
 def normalize_entry_interaction_at_utc(entry_interaction_at_utc: str) -> str | None:
+    """Normalize optional interaction timestamp and require UTC offsets."""
     raw_value = (entry_interaction_at_utc or "").strip()
     if not raw_value:
         return None
@@ -70,6 +74,7 @@ def normalize_entry_interaction_at_utc(entry_interaction_at_utc: str) -> str | N
 
 
 def validate_attachment_upload(upload: UploadFile, max_upload_bytes: int) -> None:
+    """Validate attachment filename shape and declared size before processing."""
     raw_name = Path(upload.filename or "").name
     if not Path(raw_name).suffix:
         raise ValueError("Attachment filename must include an extension")
@@ -80,12 +85,14 @@ def validate_attachment_upload(upload: UploadFile, max_upload_bytes: int) -> Non
 
 
 def get_submitted_attachments(attachments: list[UploadFile] | None) -> list[UploadFile]:
+    """Return only non-empty uploaded file objects from form input."""
     if not attachments:
         return []
     return [upload for upload in attachments if upload and upload.filename]
 
 
 def _escape_ics_text(value: str) -> str:
+    """Escape text for safe insertion into ICS properties."""
     escaped = (value or "").replace("\\", "\\\\")
     escaped = escaped.replace(";", "\\;").replace(",", "\\,")
     escaped = escaped.replace("\r\n", "\\n").replace("\n", "\\n")
@@ -93,6 +100,7 @@ def _escape_ics_text(value: str) -> str:
 
 
 def build_ics_content(title: str, event_date: str, event_time: str, description: str) -> str:
+    """Build a minimal iCalendar payload for a single event."""
     dtstamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     event_uid = f"{uuid.uuid4().hex}@homeserviceslogbook.local"
     parsed_date = datetime.strptime(event_date, "%Y-%m-%d")
@@ -137,6 +145,7 @@ def build_ics_content(title: str, event_date: str, event_time: str, description:
 
 
 def slugify_for_filename(value: str, fallback: str = "calendar-event") -> str:
+    """Generate a filesystem-friendly slug for download filenames."""
     slug = re.sub(r"[^a-z0-9]+", "-", (value or "").lower()).strip("-")
     return slug[:40] or fallback
 
@@ -146,6 +155,7 @@ def _select_labels_for_form(
     label_uids: list[str],
     new_label_names: list[str],
 ) -> tuple[list, list[str]]:
+    """Resolve selected existing labels plus normalized new label names for form rendering."""
     labels_by_uid = {str(item["label_uid"]): item for item in all_labels}
     selected_labels: list = []
     seen_uids: set[str] = set()
@@ -191,8 +201,7 @@ def _render_entry_form(
     return_next: str | None = None,
     status_code: int = 200,
 ):
-    # Get all form context (entries, attachments, labels) without exposing PKs to this layer.
-    # The helper internally resolves the vendor UID to PK and aggregates all necessary data.
+    """Render create/edit entry form with aggregated UID-shaped context."""
     form_context = get_vendor_entry_form_context(
         vendor_uid=vendor["vendor_uid"],
         entry_uid_to_edit=current_entry_uid,

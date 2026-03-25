@@ -1,12 +1,17 @@
+"""Shared text, UID, and timestamp utility helpers."""
+
 import re
 import uuid
 from datetime import datetime, timezone
 
+
 def utc_now_iso() -> str:
+    """Return current UTC time in ISO 8601 format with Z suffix."""
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def normalize_optional_text(value: str | None) -> str | None:
+    """Trim text and return None when the result is empty."""
     if value is None:
         return None
     normalized = value.strip()
@@ -14,6 +19,7 @@ def normalize_optional_text(value: str | None) -> str | None:
 
 
 def normalize_label_name(value: str | None) -> str | None:
+    """Normalize label text and collapse internal whitespace."""
     normalized = normalize_optional_text(value)
     if normalized is None:
         return None
@@ -22,22 +28,21 @@ def normalize_label_name(value: str | None) -> str | None:
 
 def is_valid_hex_color(value: str | None) -> bool:
     """
-    Check if value is a valid hex color code.
-    Accepts: #RRGGBB or #RRGGBBAA (6 or 8 hex digits after #).
-    Empty/None values return True (colors are optional).
+    Validate optional hex color input.
+    Accepts #RRGGBB or #RRGGBBAA; empty values are allowed.
     """
     if not value:
         return True
-    
+
     normalized = (value or "").strip()
     if not normalized:
         return True
-    
-    # Must be exactly #RRGGBB (6 hex) or #RRGGBBAA (8 hex)
+
     return bool(re.match(r"^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$", normalized))
 
 
 def make_uid(kind: str, name: str | None = None) -> str:
+    """Generate a stable-format UID for each supported record type."""
     if kind == "vendor":
         slug = re.sub(r"[^a-z0-9]+", "-", (name or "").lower()).strip("-")[:30]
         short = uuid.uuid4().hex[:4]
@@ -58,6 +63,7 @@ def make_uid(kind: str, name: str | None = None) -> str:
 
 
 def normalize_required_text(value: str, field_name: str) -> str:
+    """Normalize required form text and raise when blank."""
     normalized = re.sub(r"\s+", " ", (value or "").strip())
     if not normalized:
         raise ValueError(f"{field_name} is required")

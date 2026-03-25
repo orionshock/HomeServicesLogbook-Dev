@@ -1,20 +1,25 @@
+"""Runtime configuration and path resolution for local app execution."""
+
 import os
 from pathlib import Path
 
 
 def _is_truthy_env(value: str | None, *, default: bool = False) -> bool:
+    """Interpret common truthy environment variable values."""
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _is_enabled_env(value: str | None, *, default: bool = False) -> bool:
+    """Interpret strict enable flags used by security-related env vars."""
     if value is None:
         return default
     return value.strip().lower() in {"1", "true"}
 
 
 def _normalize_root_path(value: str | None) -> str:
+    """Normalize an app root path to FastAPI root_path format."""
     raw_value = (value or "").strip()
     if not raw_value or raw_value == "/":
         return ""
@@ -26,6 +31,7 @@ def _normalize_root_path(value: str | None) -> str:
 
 
 def _resolve_runtime_path(value: str | None, *, default: Path, repo_root: Path) -> Path:
+    """Resolve configured paths, supporting both absolute and repo-relative values."""
     raw_value = (value or "").strip()
     if not raw_value:
         return default.resolve()
@@ -37,13 +43,14 @@ def _resolve_runtime_path(value: str | None, *, default: Path, repo_root: Path) 
 
 
 def _cookie_path_from_root_path(root_path: str) -> str:
-    # Cookies must be scoped to the mounted app path for subpath/proxy deployments.
+    """Scope cookies to the mounted app path for proxy/subpath deployments."""
     if not root_path or root_path == "/":
         return "/"
     return root_path
 
 
 def _ensure_directory(path: Path, *, env_name: str) -> None:
+    """Create and validate a required directory path."""
     try:
         path.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
@@ -54,6 +61,7 @@ def _ensure_directory(path: Path, *, env_name: str) -> None:
 
 
 def _validate_db_path(path: Path, *, env_name: str) -> None:
+    """Validate that the DB path points to a file location and parent directory exists."""
     if path.exists() and path.is_dir():
         raise RuntimeError(f"Invalid {env_name}: '{path}' points to a directory; expected a file path")
 
