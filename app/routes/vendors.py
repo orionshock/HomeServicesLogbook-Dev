@@ -14,7 +14,6 @@ from app.db import (
     list_labels_for_vendor_uid,
     list_vendor_listing_rows,
     replace_vendor_labels_by_uid,
-    resolve_submitted_labels,
     unarchive_vendor_by_uid,
     update_vendor_by_uid,
 )
@@ -285,13 +284,13 @@ def vendor_new_submit(
             status_code=400,
         )
 
-    resolved_label_ids = resolve_submitted_labels(
+    replace_vendor_labels_by_uid(
+        vendor_uid=vendor_uid,
         label_uids=label_uids or [],
         new_label_names=new_label_names or [],
         actor=actor,
         now=now,
     )
-    replace_vendor_labels_by_uid(vendor_uid, resolved_label_ids)
 
     return RedirectResponse(url=path_for(request, "vendor_detail", vendor_uid=vendor_uid), status_code=303)
 
@@ -490,12 +489,12 @@ def vendor_edit_submit(
             status_code=400,
         )
 
-    resolved_label_ids = resolve_submitted_labels(
+    replace_vendor_labels_by_uid(
+        vendor_uid=vendor_uid,
         label_uids=label_uids or [],
         new_label_names=new_label_names or [],
         actor=actor,
         now=now,
     )
-    replace_vendor_labels_by_uid(vendor_uid, resolved_label_ids)
 
     return RedirectResponse(url=path_for(request, "vendor_detail", vendor_uid=vendor_uid), status_code=303)

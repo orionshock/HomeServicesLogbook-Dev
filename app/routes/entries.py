@@ -22,7 +22,6 @@ from app.db import (
     list_labels,
     replace_entry_labels_by_uid,
     resolve_attachment_disk_path,
-    resolve_submitted_labels,
     store_attachment_uploads_for_entry_uid,
     update_entry_by_uid,
 )
@@ -442,13 +441,13 @@ def entry_edit_submit(
             status_code=400,
         )
 
-    resolved_label_ids = resolve_submitted_labels(
+    replace_entry_labels_by_uid(
+        entry_uid=entry_uid,
         label_uids=label_uids or [],
         new_label_names=new_label_names or [],
         actor=actor,
         now=now,
     )
-    replace_entry_labels_by_uid(entry_uid, resolved_label_ids)
 
     for attachment_uid in set(remove_attachment_uids or []):
         delete_entry_attachment_by_uid_for_entry_uid(entry_uid, attachment_uid)

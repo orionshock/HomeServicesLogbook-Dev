@@ -192,15 +192,27 @@ def list_labels_for_vendor_uid(vendor_uid: str) -> list[sqlite3.Row]:
     return list_labels_for_vendor_id(int(vendor["id"]))
 
 
-def replace_vendor_labels_by_uid(vendor_uid: str, label_ids: list[int]) -> None:
-    """Replace vendor labels using UID instead of PK."""
+def replace_vendor_labels_by_uid(
+    vendor_uid: str,
+    label_uids: list[str],
+    new_label_names: list[str],
+    actor: str | None,
+    now: str,
+) -> None:
+    """Replace vendor labels from submitted values without exposing PKs."""
     from .vendors import get_vendor_by_uid
 
     vendor = get_vendor_by_uid(vendor_uid)
     if vendor is None:
         raise ValueError(f"Vendor not found: {vendor_uid}")
 
-    replace_vendor_labels(int(vendor["id"]), label_ids)
+    resolved_label_ids = resolve_submitted_labels(
+        label_uids=label_uids,
+        new_label_names=new_label_names,
+        actor=actor,
+        now=now,
+    )
+    replace_vendor_labels(int(vendor["id"]), resolved_label_ids)
 
 
 def list_labels_for_entry_id(entry_id: int) -> list[sqlite3.Row]:
@@ -311,12 +323,24 @@ def get_entry_labels_by_uid(entry_uid: str) -> list[sqlite3.Row]:
     return list_labels_for_entry_id(int(entry["id"]))
 
 
-def replace_entry_labels_by_uid(entry_uid: str, label_ids: list[int]) -> None:
-    """Replace entry labels using UID instead of PK."""
+def replace_entry_labels_by_uid(
+    entry_uid: str,
+    label_uids: list[str],
+    new_label_names: list[str],
+    actor: str | None,
+    now: str,
+) -> None:
+    """Replace entry labels from submitted values without exposing PKs."""
     from .entries import get_entry_by_uid
 
     entry = get_entry_by_uid(entry_uid)
     if entry is None:
         raise ValueError(f"Entry not found: {entry_uid}")
 
-    replace_entry_labels(int(entry["id"]), label_ids)
+    resolved_label_ids = resolve_submitted_labels(
+        label_uids=label_uids,
+        new_label_names=new_label_names,
+        actor=actor,
+        now=now,
+    )
+    replace_entry_labels(int(entry["id"]), resolved_label_ids)
