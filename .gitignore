@@ -12,5 +12,8 @@ uploads/
 # OS
 .DS_Store
 Thumbs.db
-.code-workspace
-.ps1
+*.code-workspace
+
+# local development scripts
+run-dev-server.ps1
+run-dev-server-proxytest.ps1
