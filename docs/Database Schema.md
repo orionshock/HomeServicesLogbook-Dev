@@ -33,6 +33,20 @@ Layer boundary contract:
 
 ---
 
+## Current Write Rules In App Logic
+
+Some important behavior is enforced in application code rather than by SQLite constraints alone:
+
+- Entry creation is skipped entirely when the submitted form is completely blank and contains no labels or attachments.
+- Archived vendors cannot receive new entries.
+- Permanent vendor deletion is only available after the vendor has been archived.
+- Entry interaction timestamps must parse as UTC timestamps with offset `00:00`; routes normalize them to ISO 8601 `Z` form before persistence.
+- Attachments must include a filename extension and are capped at 10 MB per file by route/runtime validation.
+- Attachment downloads and deletions use safe path resolution under `APP_UPLOADS_DIR` to block path traversal.
+- Mutating routes populate `*_created_by`, `*_updated_by`, and related timestamp columns from the resolved request actor and current UTC time where the schema supports them.
+
+---
+
 ## Schema Lifecycle
 
 - Schema is initialized at startup by app/db/schema.py:init_db.
@@ -271,6 +285,7 @@ Query behavior in current code:
 - Logbook search matches entry_title, entry_body_text, entry_rep_name, vendor_name, and entry label names.
 - Vendor list and logbook routes both support showing archived vendors based on a cookie/query preference.
 - Labels are organizational metadata and do not replace timeline data in entries.
+- Vendor list rows and new-entry vendor picker rows are assembled as route-ready structures with label metadata and search text, while keeping internal PK use inside DB helpers.
 
 Boundary reminder:
 - Route-to-DB calls use public identifiers such as vendor_uid, entry_uid, attachment_uid, and label_uid.

@@ -174,6 +174,25 @@ Routes are orchestration-only by default:
 - call DB operations
 - render/redirect
 
+### Preserve root-path-safe navigation
+All internal app URLs should continue to flow through route-name helpers.
+
+Use:
+- `path_for(...)` in Python routes
+- injected `url_for(...)` in templates
+
+Do not hardcode internal app paths in templates or redirect responses. The current app supports mounted subpaths and forwarded root paths, so direct string URLs are easy to break.
+
+### Normalize externally supplied timestamps at the route boundary
+When handling entry interaction timestamps or similar user-submitted datetimes:
+
+- validate early in the route layer
+- keep accepted input rules explicit
+- normalize to a stable stored format before calling DB helpers
+
+Current convention:
+- entry interaction timestamps are stored as UTC ISO 8601 values using `Z`
+
 ---
 
 ## Template Style (Jinja)
@@ -218,6 +237,18 @@ They own:
 - integrity of multi-step data operations
 
 They may use integer IDs internally, but should expose UID-shaped functions to routes.
+
+### Prefer operation-level helpers for multi-step writes
+When a write spans multiple tables or touches the filesystem, prefer one DB-level operation that owns the full action.
+
+Good examples from the current codebase:
+- `create_entry_for_vendor_uid`
+- `replace_vendor_labels_by_uid`
+- `replace_entry_labels_by_uid`
+- `delete_entry_by_uid`
+- `delete_vendor_by_uid`
+
+This keeps route handlers focused on validation and response flow while preserving data/file integrity in one place.
 
 ### Use parameterized SQL only
 Never build SQL queries with string interpolation.
@@ -286,6 +317,11 @@ This module is responsible for:
 - deleting files and attachment rows together when required
 
 Route modules should call UID-based attachment DB functions and must not manipulate attachment files directly.
+
+### Fail safe on destructive file operations
+Deletion helpers should continue to validate that resolved attachment paths stay under `APP_UPLOADS_DIR` before deleting anything.
+
+Missing files may be tolerated when appropriate, but path traversal or directory targets should be treated as errors.
 
 ### Never trust uploaded filenames
 Always generate a safe internal filename.
@@ -360,6 +396,15 @@ Validate:
 - required fields
 - file sizes
 - allowable actions
+- root-path-aware redirect targets when accepting optional `next` parameters
+
+### Preserve audit metadata on mutating actions
+When schema columns exist for audit data, route flows should continue to stamp writes with:
+
+- current UTC timestamp
+- resolved actor identity from the request context
+
+This applies to create, edit, archive, unarchive, label changes, attachment writes, and settings updates.
 
 ### Do not execute user input
 Never:

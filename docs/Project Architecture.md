@@ -15,6 +15,24 @@ No frontend framework, no build system, no ORM.
 
 ---
 
+## Current Product Surface
+
+Implemented user-facing workflows in the current codebase:
+
+- Home page showing the current location/settings summary.
+- Vendor listing with A-Z and category-style grouping plus archived toggle persistence.
+- Vendor create, edit, archive, unarchive, and archived-only permanent delete flows.
+- Vendor detail pages that combine reference data with the vendor timeline.
+- Global new-entry vendor picker.
+- Entry create, edit, delete, label assignment, attachment add/remove, and attachment download.
+- Global logbook view with pagination, archived-vendor filtering, and free-text search.
+- Label administration with inline JSON-backed create, rename, recolor, delete, and suggestion APIs.
+- Settings page for the singleton location record.
+- Optional actor override and upstream actor support.
+- On-demand `.ics` calendar export.
+
+---
+
 ## Runtime Flow
 
 ```text
@@ -94,7 +112,7 @@ Route modules interact with attachments through DB functions such as store_attac
 ## Current Folder Structure
 
 ```text
-HomeServicesLogbook-Dev/
+HomeServicesLogbook/
 |-- app/
 |   |-- actor.py (actor resolution logic and actor override routes)
 |   |-- main.py (FastAPI app setup, middleware, exception handlers, router registration)
@@ -171,6 +189,38 @@ HomeServicesLogbook-Dev/
 |-- requirements.txt (Python dependency list)
 `-- README.md (project overview and quick-start guidance)
 ```
+
+---
+
+## Runtime Modes
+
+The app supports two root-path modes:
+
+1. Static root path mode
+  - `APP_ROOT_PATH` is set once at startup.
+  - `FastAPI(..., root_path=APP_ROOT_PATH)` uses that mounted prefix.
+
+2. Upstream forwarded root path mode
+  - `USE_UPSTREAM_ROOT_PATH=true`
+  - `resolve_effective_root_path()` reads `UPSTREAM_ROOT_PATH_HEADER` on each request.
+  - `path_for()` and cookie scoping use the per-request effective root path.
+
+The app also supports two actor identity modes:
+
+1. Default/local actor mode
+  - actor falls back to `user`
+  - optional cookie-based override is enabled only when `ALLOW_ACTOR_OVERRIDE=true`
+
+2. Trusted upstream actor mode
+  - `USE_UPSTREAM_AUTH=true`
+  - actor comes from `UPSTREAM_ACTOR_HEADER` unless a local override is allowed and present
+
+Development entry points currently in the repo:
+
+- `docker-compose.yml`
+  - builds from the included `Dockerfile`
+  - mounts a named volume at `/data`
+  - loads additional env vars from `.env`
 
 ---
 
@@ -407,8 +457,12 @@ Primary keys remain internal to DB modules during all operations.
 - settings helpers also self-heal the singleton row when absent.
 - Development schema changes are currently applied by recreating APP_DB_PATH instead of running migrations.
 - Upload size cap is 10 MB per file.
+- Attachment uploads must include a filename extension.
 - Attachment path checks prevent file access outside APP_UPLOADS_DIR.
 - Entry creation intentionally no-ops when all entry fields, labels, and attachments are blank.
 - Archived vendors cannot accept new entries.
 - Vendors must be archived before permanent deletion is allowed.
 - Logbook ordering uses entry_interaction_at when present, otherwise entry_created_at.
+- Entry interaction timestamps must be UTC and are normalized to ISO 8601 `Z` form.
+- Logbook search matches entry title, body, representative name, vendor name, and entry label names.
+- Vendor-list and logbook archived toggles persist through the `show_archived_vendors` cookie, scoped to the effective root path.
