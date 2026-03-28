@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request
 
 from app.db.entries import count_logbook_entries, list_entry_related_data_by_uids, list_logbook_entries
 from app.routes import path_for, render_template
-from app.runtime import APP_COOKIE_PATH
+from app.runtime import cookie_path_from_root_path
 
 router = APIRouter()
 
@@ -82,7 +82,7 @@ def logbook_page(request: Request, page: int = 1, show_archived: int | None = No
             key="show_archived_vendors",
             value="1" if include_archived else "0",
             max_age=60 * 60 * 24 * 365,
-            path=APP_COOKIE_PATH,
+            path=cookie_path_from_root_path((request.scope.get("root_path") or "").strip()),
             samesite="lax",
             httponly=True,
         )

@@ -180,7 +180,7 @@ HomeServicesLogbook-Dev/
 
 Responsibilities:
 - Creates the FastAPI app with lifespan from app/routes/home.py.
-- Applies root_path from APP_ROOT_PATH.
+- Applies request-aware root_path via middleware.
 - Mounts static files at /static.
 - Registers exception handlers:
   - HTTPException -> 404.html or error.html
@@ -210,7 +210,7 @@ Shared route utilities:
 Actor and override handling:
 - Current actor precedence:
   - actor_override cookie, but only when ALLOW_ACTOR_OVERRIDE is enabled
-  - trusted upstream header, when TRUST_UPSTREAM_AUTH is enabled
+  - trusted upstream header, when USE_UPSTREAM_AUTH is enabled
   - default actor_id = user
 - Async/fetch requests receive JSON responses.
 - Non-async requests receive redirects back to the referer or home page.
@@ -218,14 +218,15 @@ Actor and override handling:
 ## app/runtime.py
 
 Environment normalization helpers and runtime constants:
-- TRUST_UPSTREAM_AUTH
+- USE_UPSTREAM_AUTH
 - UPSTREAM_ACTOR_HEADER
+- USE_UPSTREAM_ROOT_PATH
+- UPSTREAM_ROOT_PATH_HEADER
 - ALLOW_ACTOR_OVERRIDE
 - APP_ROOT_PATH
 - APP_DATA_DIR
 - APP_UPLOADS_DIR
 - APP_DB_PATH
-- APP_COOKIE_PATH
 
 Runtime module behavior:
 - resolves repo-relative or absolute data paths
@@ -235,15 +236,24 @@ Runtime module behavior:
 ## Environment Configuration
 
 Actor resolution and path behavior are controlled by these environment variables:
-
-- TRUST_UPSTREAM_AUTH
+- USE_UPSTREAM_AUTH
   - Default: false
-  - Truthy values accepted: 1, true, yes, on
+  - Enabled only for strict values 1 or true
   - When enabled, app can read actor identity from a trusted upstream header.
 
 - UPSTREAM_ACTOR_HEADER
   - Default: X-Remote-User
-  - Header name used for upstream actor identity when TRUST_UPSTREAM_AUTH is enabled.
+  - Header name used for upstream actor identity when USE_UPSTREAM_AUTH is enabled.
+
+- USE_UPSTREAM_ROOT_PATH
+  - Default: false
+  - Enabled only for strict values 1 or true
+  - When enabled, app resolves root_path from UPSTREAM_ROOT_PATH_HEADER on each request.
+  - In this mode, APP_ROOT_PATH is ignored.
+
+- UPSTREAM_ROOT_PATH_HEADER
+  - Default: X-Ingress-Path
+  - Header name used for upstream root-path forwarding when USE_UPSTREAM_ROOT_PATH is enabled.
 
 - ALLOW_ACTOR_OVERRIDE
   - Default: false
@@ -253,7 +263,7 @@ Actor resolution and path behavior are controlled by these environment variables
 - APP_ROOT_PATH
   - Default: empty string (mounted at site root)
   - Normalized to a leading slash with no trailing slash.
-  - Used as FastAPI root_path and by path_for when generating links.
+  - Used when USE_UPSTREAM_ROOT_PATH is disabled.
 
 - APP_DATA_DIR
   - Default: data (repo-local path)
@@ -270,9 +280,9 @@ Actor resolution and path behavior are controlled by these environment variables
   - Can be absolute or relative; relative paths resolve from repo root.
   - Parent directory is ensured to exist at startup.
 
-- APP_COOKIE_PATH
-  - Derived from APP_ROOT_PATH.
-  - Used to scope actor and archived-list preference cookies for subpath deployments.
+- Cookie path
+  - Derived per request from the effective root_path.
+  - Uses / when mounted at the site root.
 
 ## app/db/
 

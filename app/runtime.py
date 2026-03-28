@@ -1,14 +1,10 @@
 """Runtime configuration and path resolution for local app execution."""
 
 import os
+from collections.abc import Mapping
 from pathlib import Path
 
-
-def _is_truthy_env(value: str | None, *, default: bool = False) -> bool:
-    """Interpret common truthy environment variable values."""
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+from app.utils import normalize_root_path
 
 
 def _is_enabled_env(value: str | None, *, default: bool = False) -> bool:
@@ -18,35 +14,41 @@ def _is_enabled_env(value: str | None, *, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true"}
 
 
-def _normalize_root_path(value: str | None) -> str:
-    """Normalize an app root path to FastAPI root_path format."""
-    raw_value = (value or "").strip()
-    if not raw_value or raw_value == "/":
-        return ""
-
-    if not raw_value.startswith("/"):
-        raw_value = f"/{raw_value}"
-
-    return raw_value.rstrip("/")
-
-
 def _resolve_runtime_path(value: str | None, *, default: Path, repo_root: Path) -> Path:
     """Resolve configured paths, supporting both absolute and repo-relative values."""
-    raw_value = (value or "").strip()
-    if not raw_value:
-        return default.resolve()
+    try:
+        raw_value = (value or "").strip()
+        if not raw_value:
+            configured_path = default
+        else:
+            configured_path = Path(raw_value).expanduser()
 
-    configured_path = Path(raw_value).expanduser()
-    if not configured_path.is_absolute():
-        configured_path = repo_root / configured_path
-    return configured_path.resolve()
+        if not configured_path.is_absolute():
+            configured_path = repo_root / configured_path
+
+        return configured_path.resolve()
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise RuntimeError(f"Invalid configured path '{value}': {exc}") from exc
 
 
-def _cookie_path_from_root_path(root_path: str) -> str:
+def cookie_path_from_root_path(root_path: str) -> str:
     """Scope cookies to the mounted app path for proxy/subpath deployments."""
     if not root_path or root_path == "/":
         return "/"
     return root_path
+
+
+def resolve_effective_root_path(headers: Mapping[str, str]) -> str:
+    """Resolve effective root path from request headers and configured env behavior."""
+    if USE_UPSTREAM_ROOT_PATH:
+        if not UPSTREAM_ROOT_PATH_HEADER:
+            return ""
+        header_root_path = normalize_root_path(headers.get(UPSTREAM_ROOT_PATH_HEADER))
+        if header_root_path is None:
+            return ""
+        return header_root_path
+
+    return APP_ROOT_PATH
 
 
 def _ensure_directory(path: Path, *, env_name: str) -> None:
@@ -68,17 +70,19 @@ def _validate_db_path(path: Path, *, env_name: str) -> None:
     _ensure_directory(path.parent, env_name=f"{env_name} parent directory")
 
 
-TRUST_UPSTREAM_AUTH = _is_truthy_env(os.getenv("TRUST_UPSTREAM_AUTH"), default=False)
+USE_UPSTREAM_AUTH = _is_enabled_env(os.getenv("USE_UPSTREAM_AUTH"), default=False)
 UPSTREAM_ACTOR_HEADER = (os.getenv("UPSTREAM_ACTOR_HEADER", "X-Remote-User") or "").strip()
+USE_UPSTREAM_ROOT_PATH = _is_enabled_env(os.getenv("USE_UPSTREAM_ROOT_PATH"), default=False)
+UPSTREAM_ROOT_PATH_HEADER = (os.getenv("UPSTREAM_ROOT_PATH_HEADER", "X-Ingress-Path") or "").strip()
 ALLOW_ACTOR_OVERRIDE = _is_enabled_env(os.getenv("ALLOW_ACTOR_OVERRIDE"), default=False)
-APP_ROOT_PATH = _normalize_root_path(os.getenv("APP_ROOT_PATH"))
+APP_ROOT_PATH = normalize_root_path(os.getenv("APP_ROOT_PATH")) or ""
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # Default to repo-local data so local development stays self-contained.
 APP_DATA_DIR = _resolve_runtime_path(
     os.getenv("APP_DATA_DIR"),
-    default=REPO_ROOT / "data",
+    default=Path("data"),
     repo_root=REPO_ROOT,
 )
 # Upload and DB locations can be overridden independently when needed.
@@ -92,8 +96,6 @@ APP_DB_PATH = _resolve_runtime_path(
     default=APP_DATA_DIR / "logbook.db",
     repo_root=REPO_ROOT,
 )
-
-APP_COOKIE_PATH = _cookie_path_from_root_path(APP_ROOT_PATH)
 
 _ensure_directory(APP_DATA_DIR, env_name="APP_DATA_DIR")
 _ensure_directory(APP_UPLOADS_DIR, env_name="APP_UPLOADS_DIR")

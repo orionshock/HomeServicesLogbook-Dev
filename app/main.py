@@ -10,7 +10,7 @@ from app.routes.labels import router as labels_router
 from app.routes.logbook import router as logbook_router
 from app.routes.settings import router as settings_router
 from app.routes.vendors import router as vendors_router
-from app.runtime import APP_ROOT_PATH
+from app.runtime import APP_ROOT_PATH, resolve_effective_root_path
 
 app = FastAPI(lifespan=lifespan, root_path=APP_ROOT_PATH)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -77,6 +77,9 @@ async def generic_exception_handler(request: Request, _exc: Exception):
 
 @app.middleware("http")
 async def actor_context_middleware(request: Request, call_next):
+    effective_root_path = resolve_effective_root_path(request.headers)
+    request.scope["root_path"] = effective_root_path
+    request.state.effective_root_path = effective_root_path
     request.state.current_actor = resolve_current_actor(request)
     return await call_next(request)
 

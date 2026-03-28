@@ -18,6 +18,27 @@ def normalize_optional_text(value: str | None) -> str | None:
     return normalized or None
 
 
+def normalize_root_path(value: str | None) -> str | None:
+    """Normalize a root path value or return None when invalid."""
+    normalized = normalize_optional_text(value)
+    if normalized is None or normalized == "/":
+        return ""
+
+    lowered = normalized.lower()
+    if lowered.startswith("http://") or lowered.startswith("https://"):
+        return None
+
+    if "\\" in normalized or "?" in normalized or "#" in normalized:
+        return None
+
+    if " " in normalized or "\t" in normalized or "\r" in normalized or "\n" in normalized:
+        return None
+
+    normalized = f"/{normalized.lstrip('/')}"
+    normalized = normalized.rstrip("/")
+    return normalized or ""
+
+
 def normalize_label_name(value: str | None) -> str | None:
     """Normalize label text and collapse internal whitespace."""
     normalized = normalize_optional_text(value)
