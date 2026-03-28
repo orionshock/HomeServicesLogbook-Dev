@@ -14,7 +14,10 @@ def _path_has_prefix(path: str, prefix: str) -> bool:
 
 def path_for(request: Request, endpoint_name: str, **path_params) -> str:
     path = str(request.app.url_path_for(endpoint_name, **path_params))
-    root_path = (request.scope.get("root_path") or "").rstrip("/")
+    root_path = getattr(request.state, "effective_root_path", None)
+    if root_path is None:
+        root_path = request.scope.get("root_path") or ""
+    root_path = root_path.rstrip("/")
     if not root_path or _path_has_prefix(path, root_path):
         return path
 

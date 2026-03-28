@@ -28,7 +28,8 @@ def _read_upstream_actor(request: Request) -> str | None:
 
 
 def _cookie_path_for_request(request: Request) -> str:
-    return cookie_path_from_root_path((request.scope.get("root_path") or "").strip())
+    effective_root_path = getattr(request.state, "effective_root_path", "") or ""
+    return cookie_path_from_root_path(effective_root_path.strip())
 
 
 def resolve_current_actor(request: Request) -> dict[str, str | None]:

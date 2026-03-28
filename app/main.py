@@ -78,7 +78,6 @@ async def generic_exception_handler(request: Request, _exc: Exception):
 @app.middleware("http")
 async def actor_context_middleware(request: Request, call_next):
     effective_root_path = resolve_effective_root_path(request.headers)
-    request.scope["root_path"] = effective_root_path
     request.state.effective_root_path = effective_root_path
     request.state.current_actor = resolve_current_actor(request)
     return await call_next(request)

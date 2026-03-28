@@ -326,7 +326,9 @@ def vendor_list(request: Request, show_archived: int | None = None):
             key="show_archived_vendors",
             value="1" if include_archived else "0",
             max_age=60 * 60 * 24 * 365,
-            path=cookie_path_from_root_path((request.scope.get("root_path") or "").strip()),
+            path=cookie_path_from_root_path(
+                (getattr(request.state, "effective_root_path", "") or "").strip()
+            ),
             samesite="lax",
             httponly=True,
         )
