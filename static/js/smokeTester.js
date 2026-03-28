@@ -6,7 +6,7 @@
 
   function appUrl(path) {
     if (!path || path === "/") {
-      return appRootPath || "/";
+      return appRootPath ? `${appRootPath}/` : "/";
     }
 
     return `${appRootPath}${path.startsWith("/") ? path : `/${path}`}`;

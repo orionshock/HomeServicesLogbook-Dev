@@ -18,11 +18,13 @@ def path_for(request: Request, endpoint_name: str, **path_params) -> str:
     if root_path is None:
         root_path = request.scope.get("root_path") or ""
     root_path = root_path.rstrip("/")
+    if path == "/":
+        if not root_path:
+            return "/"
+        return f"{root_path}/"
+
     if not root_path or _path_has_prefix(path, root_path):
         return path
-
-    if path == "/":
-        return root_path
 
     return f"{root_path}{path}"
 
@@ -39,6 +41,7 @@ def render_template(request: Request, template_name: str, context: dict | None =
     payload = {
         "request": request,
         "url_for": url_for,
+        "effective_root_path": getattr(request.state, "effective_root_path", "") or "",
         "current_actor": getattr(request.state, "current_actor", _resolve_template_actor(request)),
         "allow_actor_override": ALLOW_ACTOR_OVERRIDE,
     }

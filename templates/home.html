@@ -14,7 +14,7 @@
 	<link rel="stylesheet" href="{{ url_for('static', path='css/entries.css') }}">
 </head>
 
-<body class="app-shell" data-root-path="{{ request.scope.root_path or '' }}">
+<body class="app-shell" data-root-path="{{ effective_root_path or '' }}">
 	<header class="app-header">
 		<div class="app-nav" aria-hidden="true"></div>
 		{% include "partials/actor_control.html" %}

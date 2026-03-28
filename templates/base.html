@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/entries.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/labels.css') }}">
 </head>
-<body class="app-shell" data-root-path="{{ request.scope.root_path or '' }}">
+<body class="app-shell" data-root-path="{{ effective_root_path or '' }}">
     <header class="app-header">
         <nav class="app-nav" aria-label="Main Navigation">
             <div class="app-nav-group">
