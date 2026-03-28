@@ -19,9 +19,7 @@ def path_for(request: Request, endpoint_name: str, **path_params) -> str:
         root_path = request.scope.get("root_path") or ""
     root_path = root_path.rstrip("/")
     if path == "/":
-        if not root_path:
-            return "/"
-        return f"{root_path}/"
+        return root_path or "/"
 
     if not root_path or _path_has_prefix(path, root_path):
         return path
